@@ -9,7 +9,8 @@ from storage import InvoiceStore, StorageError
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
-from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey
+from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest
+from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
 t = Translator(language).text
@@ -140,6 +141,63 @@ def detail(i):
         st.caption(t('Maximum 100: financial strength 40/25/5; payment history 25/15/0; confirmation 25; documents 10. This score is not a probability of default.'))
     if i['note']:
         st.info(t(i['note']))
+
+
+def future_value_panel(invoice):
+    st.subheader(t('Investor future value'))
+    funding = invoice['financing']
+    missing = (not funding.get('financed_on') or 'annual_interest_rate' not in funding or
+               (invoice.get('outcome') == 'Paid' and not funding.get('paid_on')))
+    if missing:
+        st.info(t('This older financing has no complete interest settings. Record its dates and annual rate to enable the calculation.'))
+    with st.expander(t('Interest simulation settings'), expanded=missing):
+        with st.form('interest_settings_' + invoice['id']):
+            start = st.date_input(t('Financing date'),
+                                  value=date.fromisoformat(funding['financed_on']) if funding.get('financed_on') else valuation_today(),
+                                  min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
+                                  disabled=bool(funding.get('financed_on')), key='interest_start_' + invoice['id'])
+            annual = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
+                                     value=float(funding.get('annual_interest_rate', 5.0)), step=0.1,
+                                     key='interest_rate_' + invoice['id'])
+            payment = None
+            if invoice.get('outcome') == 'Paid' and not funding.get('paid_on'):
+                payment = st.date_input(t('Payment date'), value=valuation_today(),
+                                        min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
+                                        key='interest_paid_' + invoice['id'])
+            save = st.form_submit_button(t('Save interest assumptions'))
+        if save:
+            try:
+                persist_update(invoice, configure_interest, annual, start, payment)
+                st.session_state.notice = t('Interest assumptions saved.')
+                st.rerun()
+            except ValueError as exc:
+                st.error(t(str(exc)))
+    if missing:
+        return
+    as_of = valuation_today()
+    if st.toggle(t('Choose a projection date'), key='future_projection_' + invoice['id']):
+        as_of = st.date_input(t('Valuation date'), value=valuation_today(),
+                              min_value=date.fromisoformat(funding['financed_on']),
+                              key='future_date_' + invoice['id'])
+    try:
+        result = investor_valuation(invoice, as_of)
+    except ValueError as exc:
+        st.error(t(str(exc)))
+        return
+    a, b, c = st.columns(3)
+    a.metric(t('Future value (simulation)'), euro(result['future_value']))
+    b.metric(t('Theoretical interest'), euro(result['interest']))
+    c.metric(t('Days without payment'), result['days'])
+    st.caption(t('Capital advanced: {capital} · Annual interest: {rate}% · Time: {days}/365 = {years} years.',
+                 capital=euro(result['principal']), rate=result['annual_rate'], days=result['days'],
+                 years=f"{result['years']:.6f}"))
+    st.caption(t('Calculated through {date}.', date=date.fromisoformat(result['end']).strftime('%d/%m/%Y')))
+    st.latex(r'FV = P \times \exp\left(\frac{d}{365} \times \frac{r}{100}\right)')
+    st.caption(t('The calculation starts on the financing date, including days before the invoice due date. It updates when this view is loaded or refreshed.'))
+    st.caption(t('Separate theoretical scenario: not added to the invoice, fee, insurance indemnity or collected income. Repayment is not guaranteed.'))
+    if result['stopped_at_payment']:
+        st.info(t('Interest calculation stopped on the recorded payment date.'))
+
 with st.sidebar:
     st.title(t('InvoiceFlow ↗'))
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
@@ -313,18 +371,25 @@ elif page == 'Financing':
             detail(i)
             st.caption(t('Demo requirements: buyer confirmation, identity and documents declared verified, a future due date and a score ≥ 65/100.'))
             rate = st.slider(t('Fee on face value (%)'), 0.0, 10.0, st.session_state.get('ui_fee_on_face_value', 4.0), 0.1, key='ui_fee_on_face_value')
+            annual_interest = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
+                                              value=st.session_state.get('ui_financing_interest', 5.0), step=0.1,
+                                              key='ui_financing_interest')
             recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
             coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
             q = quote(i['amount'], rate)
             a, b = st.columns(2)
             a.metric(t('Simulated advance to the SME'), euro(q['advance']))
             b.metric(t('Gross margin if paid in full'), euro(q['fee']))
+            days_to_due = max(0, (date.fromisoformat(i['due']) - valuation_today()).days)
+            st.metric(t('Future value at due date (simulation)'),
+                      euro(round_value(continuous_future_value(q['advance'], days_to_due / 365, annual_interest))))
+            st.caption(t('Continuous interest uses the capital advanced and a separate annual percentage rate. The fee remains a one-off percentage of the invoice.'))
             st.caption(t('Before capital costs, insurance, losses and operating expenses. Coverage is hypothetical; no insurer is connected.'))
             if not eligible(i):
                 st.warning(t('Resolve the requirements listed above before financing.'))
             if st.button(t('Simulate financing'), type='primary', disabled=not eligible(i), key='ui_simulate_financing'):
                 try:
-                    persist_update(i, finance, rate, recourse, coverage)
+                    persist_update(i, finance, rate, recourse, coverage, annual_interest)
                     st.session_state.notice = t('Simulated financing saved to the portfolio.')
                     st.rerun()
                 except ValueError as exc:
@@ -345,6 +410,20 @@ elif page == 'Simulator':
     if recourse:
         st.info(t('Recourse assumption: a claim against the SME for {p0} after indemnification. Recovery remains uncertain; the exposure is not eliminated.', p0=euro(result['supplier_claim'])))
     st.caption(t('Simplified assumptions: coverage applied to face value, indemnity capped at the advance; no recoveries, deductibles, delays or costs included. Non-recourse does not mean protection against every fraud or dispute.'))
+    st.subheader(t('Investor future value'))
+    annual = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
+                             value=st.session_state.get('ui_simulation_interest', 5.0), step=0.1,
+                             key='ui_simulation_interest')
+    years = st.number_input(t('Time without payment (years)'), min_value=0.0, max_value=100.0,
+                            value=st.session_state.get('ui_simulation_years', 1.0), step=0.01,
+                            key='ui_simulation_years')
+    future = continuous_future_value(result['advance'], years, annual)
+    a, b = st.columns(2)
+    a.metric(t('Future value (simulation)'), euro(round_value(future)))
+    b.metric(t('Theoretical interest'), euro(round_value(future - result['advance'])))
+    st.latex(r'FV = P \times \exp\left(t \times \frac{r}{100}\right)')
+    st.caption(t('Capital is the simulated advance. Enter the annual rate as a percentage: 5 means 5%, not 0.05%.'))
+    st.caption(t('Separate theoretical scenario: not added to the invoice, fee, insurance indemnity or collected income. Repayment is not guaranteed.'))
     st.subheader(t('Revenue simulation'))
     count = st.number_input(t('Invoices financed per month'), min_value=1, value=st.session_state.get('ui_invoices_financed_per_month', 100), step=1, key='ui_invoices_financed_per_month')
     a, b = st.columns(2)
@@ -370,6 +449,8 @@ elif page == 'Portfolio':
         f = i['financing']
         if f:
             st.write(t('Advance: **{p0}** · Fee: **{p1} %** · Hypothetical coverage: **{p2} %** · {p3}', p0=euro(f['advance']), p1=f['rate'], p2=f['coverage'], p3=t('With recourse' if f['recourse'] else 'Without recourse')))
+            if profile == 'Investor':
+                future_value_panel(i)
             if i['outcome'] == 'Insolvency':
                 r = loss_scenario(i['amount'], f['rate'], f['coverage'], f['recourse'])
                 st.warning(t('Insolvency scenario: hypothetical indemnity {p0}, remaining capital at risk {p1}. No real payment.', p0=euro(r['indemnity']), p1=euro(r['residual'])))

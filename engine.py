@@ -6,6 +6,7 @@ import json
 import re
 import unicodedata
 from uuid import uuid4
+from future_value import continuous_future_value, valuation_today
 
 
 def money(value):
@@ -111,12 +112,37 @@ def confirm(i, approved, note=''):
     i.update(buyer_status='Confirmed' if approved else 'Disputed', status='Approved' if approved else 'Disputed', note=note.strip())
 
 
-def finance(i, rate, recourse, coverage):
+def finance(i, rate, recourse, coverage, annual_interest_rate=0.0, financed_on=None):
     if not eligible(i):
         raise ValueError('This invoice does not meet the demo financing requirements.')
     if not 0 <= coverage <= 100:
         raise ValueError('Invalid coverage.')
-    i.update(status='Financed', financing={**quote(i['amount'], rate), 'rate': rate, 'recourse': recourse, 'coverage': coverage})
+    start = financed_on or valuation_today()
+    if not isinstance(start, date) or not date.fromisoformat(i['issued']) <= start <= valuation_today():
+        raise ValueError('The financing date must be between the issue date and today.')
+    continuous_future_value(1, 0, annual_interest_rate)
+    i.update(status='Financed', financing={**quote(i['amount'], rate), 'rate': rate,
+             'recourse': recourse, 'coverage': coverage, 'financed_on': start.isoformat(),
+             'annual_interest_rate': float(annual_interest_rate)})
+
+
+def configure_interest(i, annual_interest_rate, financed_on, paid_on=None):
+    """Record explicit assumptions for legacy funding without inventing dates."""
+    funding = i.get('financing')
+    if not funding:
+        raise ValueError('Only a financed invoice has interest simulation settings.')
+    continuous_future_value(1, 0, annual_interest_rate)
+    if not isinstance(financed_on, date) or not date.fromisoformat(i['issued']) <= financed_on <= valuation_today():
+        raise ValueError('The financing date must be between the issue date and today.')
+    if funding.get('financed_on') and funding['financed_on'] != financed_on.isoformat():
+        raise ValueError('The recorded financing date cannot be changed.')
+    candidate = dict(funding, financed_on=financed_on.isoformat(), annual_interest_rate=float(annual_interest_rate))
+    if i.get('outcome') == 'Paid':
+        payment = date.fromisoformat(funding['paid_on']) if funding.get('paid_on') else paid_on
+        if not isinstance(payment, date) or not financed_on <= payment <= valuation_today():
+            raise ValueError('Enter a payment date between the financing date and today.')
+        candidate['paid_on'] = payment.isoformat()
+    i['financing'] = candidate
 
 
 def loss_scenario(amount, rate, coverage, recourse=False):
@@ -129,14 +155,19 @@ def loss_scenario(amount, rate, coverage, recourse=False):
             'lender_exposure': residual}
 
 
-def settle(i, outcome):
+def settle(i, outcome, paid_on=None):
     if i['status'] != 'Financed':
         raise ValueError('Only a financed invoice can be tracked or closed.')
     if outcome not in ('Paid', 'Late payment', 'Insolvency', 'Dispute'):
         raise ValueError('Unknown event.')
-    i['outcome'] = outcome
     if outcome == 'Paid':
+        paid = paid_on or valuation_today()
+        start = date.fromisoformat(i['financing'].get('financed_on', i['issued']))
+        if not isinstance(paid, date) or not start <= paid <= valuation_today():
+            raise ValueError('Enter a payment date between the financing date and today.')
+        i['financing']['paid_on'] = paid.isoformat()
         i['status'] = 'Closed'
+    i['outcome'] = outcome
 
 
 def seed():
@@ -152,7 +183,7 @@ def seed():
                          identity=True, strength=strength, history=history))
     confirm(invoices[0], True)
     confirm(invoices[2], True)
-    finance(invoices[2], 3, False, 80)
+    finance(invoices[2], 3, False, 80, annual_interest_rate=5.0)
     confirm(invoices[3], False, 'Service details need clarification in this fictional scenario.')
     return invoices
 
@@ -174,3 +205,4 @@ def migrate_session(invoices):
                 invoice[field] = legacy[value]
         if invoice.get('note') == 'Prestation à clarifier dans ce scénario fictif.':
             invoice['note'] = 'Service details need clarification in this fictional scenario.'
+

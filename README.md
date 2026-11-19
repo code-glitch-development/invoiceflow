@@ -69,7 +69,7 @@ Use the sidebar to reset the shared demo. Resetting replaces the data for every 
 - SIREN validation checks the 9-digit format only, without checking company existence. Identity, documentation and financial information are simulated declarations.
 - Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
 - Transparent score out of 100: financial strength 40/25/5; payment history 25/15/0; buyer confirmation 25; documents 10. Financing requires a score ≥ 65, identity and documents declared complete, buyer confirmation and a future due date. The score is not a probability of default.
-- Fee = face value × fee rate. Advance = face value − fee. No annualized interest or guaranteed return is quoted.
+- Fee = face value × fee rate. Advance = face value − fee. This remains a one-off fee; a separate annual rate powers the investor future-value simulation below. Neither value is a guaranteed return.
 - Insolvency indemnity = min(advance, face value × hypothetical coverage). Residual capital = advance − indemnity. For a €10,000 invoice, 4% fee and 80% coverage: €9,600 advanced, €8,000 hypothetical indemnity and €1,600 residual capital at risk. This differs from the €2,000 of uncovered face value.
 - Recourse is modeled as a potential claim against the SME for the residual capital after indemnification. Recovery is uncertain and does not eliminate lender exposure. No insurance coverage is assumed for disputes or fraud.
 - Simplified assumptions exclude deductibles, waiting periods, contractual limits, recoveries, financing costs and insurance premiums. Non-recourse is not presented as universal protection.
@@ -93,6 +93,18 @@ Each change updates one invoice in a transaction. A version check rejects stale 
 
 Back up the SQLite file while the application is stopped. Database files, uploaded documents, secrets and local data are excluded from Git. The JSON export is also available for review; it is not an automatic restore mechanism.
 
+## Investor future value
+
+The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capital advanced to the SME, `r` is the annual continuous-interest rate entered as a percentage (5 means 5%), and `t` is years without payment. The 5% initial UI value is an editable example assumption. It is separate from the existing one-off invoice fee; future value is not added to the invoice, fee, insurance indemnity, claim, gross margin or collected income.
+
+- **Financing:** select an annual rate and preview future value at the invoice due date. Simulating funding saves the date and annual rate with the original advance.
+- **Portfolio:** future value, theoretical interest and elapsed days are calculated automatically when the view is loaded or refreshed. Time starts on the financing date, including days before the invoice due date. Calendar days are divided by 365, including actual leap-year days (Actual/365 fixed). Today's date uses Europe/Paris. A projection-date toggle lets investors explore longer periods without payment.
+- **Payment:** a simulated full payment records the payment date. Calculations stop on that date, even when a later projection date is selected. Late payment, insolvency or dispute does not itself simulate cash collection; any continuing exponential growth is only a theoretical scenario.
+- **Existing records:** the app never invents missing financing/payment dates or retroactively changes saved amounts. The investor can explicitly configure missing dates and an annual assumption. A recorded financing date cannot be changed; the rate remains editable as a simulation assumption.
+- **Simulator:** enter the time directly in years (fractional values are supported). Calculations always use the original advance and total elapsed time, so repeated reruns cannot compound the same period twice. Interest settings and payment dates survive database reopening and are included in JSON exports.
+
+The mathematical convention is continuous compounding; see [OpenStax](https://openstax.org/books/college-algebra-corequisite-support/pages/6-1-exponential-functions). This model does not establish contractual interest, penalties, collectible debt or guaranteed payment.
+
 ## Tests
 
 ```bash
@@ -107,6 +119,7 @@ python -m unittest -v
 - `invoice_extraction.py`: local PDF text extraction, OCR, labelled-field parsing and session prefill.
 - `packages.txt`: OCR executable and language dependencies for Community Cloud.
 - `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
+- `future_value.py`: continuous compounding, Actual/365 duration and payment-date stopping.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
 - `engine.py`: business rules, calculations, sample data and session migration.
@@ -114,6 +127,7 @@ python -m unittest -v
 - `.streamlit/config.toml`: theme and upload limit.
 - `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
 - `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
+- `test_future_value.py`: percentage/year conversion, invalid inputs, no double compounding, legacy records and payment stopping. Storage and interface tests also cover saved interest settings and projections.
 - `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 

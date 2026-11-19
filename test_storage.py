@@ -2,7 +2,8 @@ from copy import deepcopy
 from pathlib import Path
 import tempfile
 import unittest
-from engine import seed, confirm, finance
+from engine import seed, confirm, finance, settle
+from future_value import investor_valuation, valuation_today
 from storage import InvoiceStore, StorageError
 
 
@@ -22,6 +23,19 @@ class PersistenceTests(unittest.TestCase):
         reopened.initialize(seed())
         self.assertEqual(reopened.load()[0], saved)
         self.assertEqual(saved['financing']['advance'], 14400)
+
+    def test_interest_rate_funding_and_payment_dates_survive_reopening(self):
+        invoice = self.store.load()[0]
+        finance(invoice, 4, False, 80, annual_interest_rate=6.5)
+        saved = self.store.update(invoice)
+        settle(saved, 'Paid')
+        paid = self.store.update(saved)
+        reopened = InvoiceStore(self.path).load()[0]
+        self.assertEqual(reopened, paid)
+        self.assertEqual(reopened['financing']['annual_interest_rate'], 6.5)
+        self.assertEqual(reopened['financing']['financed_on'], valuation_today().isoformat())
+        self.assertEqual(reopened['financing']['paid_on'], valuation_today().isoformat())
+        self.assertEqual(investor_valuation(reopened)['interest'], 0)
 
     def test_stale_update_is_rejected_without_losing_another_invoice(self):
         initial = self.store.load()
@@ -72,3 +86,4 @@ class PersistenceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

@@ -133,6 +133,73 @@ class InterfaceTests(unittest.TestCase):
         self.assertFalse(reopened.exception)
         self.assertEqual(reopened.session_state['invoices'][0]['status'], 'Closed')
 
+    def test_future_value_simulator_uses_percent_and_years(self):
+        from future_value import continuous_future_value, round_value
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Simulator').run()
+        at.slider(key='ui_fee').set_value(0.0).run()
+        self.assertFalse(at.exception)
+        metric = lambda label: next(m.value for m in at.metric if m.label == label)
+        self.assertEqual(metric('Future value (simulation)'), '€10,512.71')
+        at.number_input(key='ui_simulation_years').set_value(0.5).run()
+        expected = round_value(continuous_future_value(10000, .5, 5))
+        self.assertEqual(metric('Future value (simulation)'), f'€{expected:,.2f}')
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.number_input(key='ui_simulation_years').value, .5)
+        self.assertEqual(metric('Valeur future (simulation)'), f'{expected:,.2f}'.replace(',', ' ').replace('.', ',') + ' €')
+
+    def test_portfolio_future_value_is_saved_projected_and_stopped_at_payment(self):
+        from datetime import timedelta
+        from future_value import continuous_future_value, round_value, valuation_today
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.number_input(key='ui_financing_interest').set_value(7.0).run()
+        at.button(key='ui_simulate_financing').click().run()
+        invoice = at.session_state['invoices'][0]
+        self.assertEqual(invoice['financing']['annual_interest_rate'], 7)
+        self.assertEqual(invoice['financing']['financed_on'], valuation_today().isoformat())
+        at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+        identity = invoice['id']
+        at.toggle(key='future_projection_' + identity).set_value(True).run()
+        at.date_input(key='future_date_' + identity).set_value(valuation_today()+timedelta(days=365)).run()
+        self.assertFalse(at.exception)
+        future = round_value(continuous_future_value(invoice['financing']['advance'], 1, 7))
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Future value (simulation)'), f'€{future:,.2f}')
+        next(b for b in at.button if b.label == 'Save tracking update').click().run()
+        self.assertFalse(at.exception)
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Theoretical interest'), '€0.00')
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Days without payment'), '0')
+        reopened = self.app()
+        stored = reopened.session_state['invoices'][0]['financing']
+        self.assertEqual(stored['annual_interest_rate'], 7)
+        self.assertEqual(stored['paid_on'], valuation_today().isoformat())
+
+    def test_legacy_interest_settings_require_explicit_save(self):
+        import os
+        from datetime import timedelta
+        from engine import seed
+        from future_value import valuation_today
+        from storage import InvoiceStore
+        records = seed()
+        legacy = records[2]
+        legacy['financing'].pop('annual_interest_rate')
+        legacy['financing'].pop('financed_on')
+        InvoiceStore(os.environ['INVOICEFLOW_DB_PATH']).initialize(records)
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+        at.selectbox(key='portfolio_pick').set_value(legacy['id']).run()
+        self.assertFalse(at.exception)
+        self.assertFalse(any(m.label == 'Future value (simulation)' for m in at.metric))
+        at.date_input(key='interest_start_' + legacy['id']).set_value(valuation_today()-timedelta(days=2))
+        at.number_input(key='interest_rate_' + legacy['id']).set_value(6.0)
+        next(b for b in at.button if b.label == 'Save interest assumptions').click().run()
+        self.assertFalse(at.exception)
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Days without payment'), '2')
+
     def test_next_step_targets_the_selected_invoice(self):
         at = self.app()
         # The second sample awaits buyer confirmation.

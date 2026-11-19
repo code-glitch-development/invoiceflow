@@ -658,6 +658,53 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
 
 
 FR.update({
+    'Investor future value': 'Valeur future pour l’investisseur',
+    'Annual interest rate (%)': 'Taux d’intérêt annuel (%)',
+    'Time without payment (years)': 'Durée sans paiement (années)',
+    'Future value (simulation)': 'Valeur future (simulation)',
+    'Future value at due date (simulation)': 'Valeur future à l’échéance (simulation)',
+    'Theoretical interest': 'Intérêts théoriques',
+    'Days without payment': 'Jours sans paiement',
+    'Financing date': 'Date de financement',
+    'Payment date': 'Date du paiement',
+    'Valuation date': 'Date de valorisation',
+    'Choose a projection date': 'Choisir une date de projection',
+    'Interest simulation settings': 'Paramètres de la simulation d’intérêts',
+    'Save interest assumptions': 'Enregistrer les hypothèses d’intérêts',
+    'Interest assumptions saved.': 'Hypothèses d’intérêts enregistrées.',
+    'This older financing has no complete interest settings. Record its dates and annual rate to enable the calculation.':
+        'Les paramètres d’intérêts de cet ancien financement sont incomplets. Renseignez ses dates et son taux annuel pour activer le calcul.',
+    'Capital advanced: {capital} · Annual interest: {rate}% · Time: {days}/365 = {years} years.':
+        'Capital avancé : {capital} · Taux annuel : {rate}% · Durée : {days}/365 = {years} années.',
+    'Calculated through {date}.': 'Calcul jusqu’au {date}.',
+    'The calculation starts on the financing date, including days before the invoice due date. It updates when this view is loaded or refreshed.':
+        'Le calcul commence à la date du financement, y compris avant l’échéance de la facture. Il est actualisé à l’ouverture ou au rafraîchissement de cette vue.',
+    'Separate theoretical scenario: not added to the invoice, fee, insurance indemnity or collected income. Repayment is not guaranteed.':
+        'Scénario théorique distinct : cette valeur n’est ajoutée ni à la facture, ni à la commission, ni à l’indemnité d’assurance, ni aux revenus encaissés. Le remboursement n’est pas garanti.',
+    'Interest calculation stopped on the recorded payment date.':
+        'Le calcul des intérêts s’est arrêté à la date de paiement enregistrée.',
+    'Continuous interest uses the capital advanced and a separate annual percentage rate. The fee remains a one-off percentage of the invoice.':
+        'Les intérêts continus utilisent le capital avancé et un taux annuel distinct. La commission reste un pourcentage unique de la facture.',
+    'Capital is the simulated advance. Enter the annual rate as a percentage: 5 means 5%, not 0.05%.':
+        'Le capital est l’avance simulée. Saisissez le taux annuel en pourcentage : 5 signifie 5 %, et non 0,05 %.',
+    'Enter a valid capital, duration and annual interest rate.':
+        'Saisissez un capital, une durée et un taux d’intérêt annuel valides.',
+    'Capital and duration must be non-negative; the annual interest rate must be between 0 and 100%.':
+        'Le capital et la durée doivent être positifs ou nuls ; le taux d’intérêt annuel doit être compris entre 0 et 100 %.',
+    'The future value is too large. Reduce the capital, rate or duration.':
+        'La valeur future est trop élevée. Réduisez le capital, le taux ou la durée.',
+    'The valuation date cannot be before the financing date.':
+        'La date de valorisation ne peut pas précéder la date de financement.',
+    'The payment date cannot be before the financing date.':
+        'La date du paiement ne peut pas précéder la date de financement.',
+    'The financing date must be between the issue date and today.':
+        'La date de financement doit être comprise entre la date d’émission et aujourd’hui.',
+    'Only a financed invoice has interest simulation settings.':
+        'Seule une facture financée possède des paramètres de simulation d’intérêts.',
+    'The recorded financing date cannot be changed.':
+        'La date de financement enregistrée ne peut pas être modifiée.',
+    'Enter a payment date between the financing date and today.':
+        'Saisissez une date de paiement comprise entre la date de financement et aujourd’hui.',
     'Optional: upload the invoice first to prefill its details. Changing the file replaces the detected fields.':
         'Facultatif : déposez d’abord la facture pour préremplir ses informations. Changer de fichier remplace les champs détectés.',
     'Reading the invoice…': 'Lecture de la facture…',
