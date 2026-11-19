@@ -1,6 +1,6 @@
 import unittest
 from datetime import date, timedelta
-from engine import seed, new_invoice, confirm, finance, settle, eligible, quote, loss_scenario, migrate_session
+from engine import seed, new_invoice, confirm, finance, settle, eligible, quote, loss_scenario, migrate_session, financing_blockers, complete_checks, journey
 
 
 class WorkflowTests(unittest.TestCase):
@@ -22,6 +22,39 @@ class WorkflowTests(unittest.TestCase):
         snapshot = i.copy()
         migrate_session([i])
         self.assertEqual(i, snapshot)
+
+    def test_blockers_and_completion_are_consistent(self):
+        args = self.args()
+        args.update(identity=False, documents=False)
+        invoice = new_invoice([], **args)
+        messages = financing_blockers(invoice)
+        self.assertIn('Buyer confirmation is missing.', messages)
+        self.assertIn('SME identity verification is incomplete.', messages)
+        self.assertTrue(any('Supporting documents' in m for m in messages))
+        confirm(invoice, True)
+        complete_checks(invoice, True, True)
+        self.assertEqual(financing_blockers(invoice), [])
+        self.assertTrue(eligible(invoice))
+        self.assertEqual([done for _, done in journey(invoice)], [True, True, True, False, False])
+        finance(invoice, 4, False, 80)
+        invoice['due'] = date.today().isoformat()
+        self.assertEqual([done for _, done in journey(invoice)], [True, True, True, True, False])
+        with self.assertRaises(ValueError):
+            complete_checks(invoice, False, False)
+        settle(invoice, 'Paid')
+        self.assertTrue(all(done for _, done in journey(invoice)))
+
+    def test_dispute_expiry_and_low_score_have_specific_reasons(self):
+        args = self.args()
+        args.update(strength='Weak', history='Frequent delays')
+        invoice = new_invoice([], **args)
+        confirm(invoice, False, 'Disputed delivery')
+        invoice['due'] = date.today().isoformat()
+        reasons = financing_blockers(invoice)
+        self.assertIn('The invoice is disputed by the buyer.', reasons)
+        self.assertIn('The due date has been reached or has passed.', reasons)
+        self.assertTrue(any('below 65/100' in message for message in reasons))
+        self.assertFalse(eligible(invoice))
 
     def test_complete_workflow(self):
         i = new_invoice([], **self.args())

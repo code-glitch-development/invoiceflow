@@ -46,7 +46,7 @@ def new_invoice(invoices, *, seller, siren, buyer, reference, amount, issued, du
     key = f'{siren}:{canonical(reference)}'
     digest = hashlib.sha256(file_bytes).hexdigest() if file_bytes else ''
     if any(i['key'] == key or (digest and digest == i['file_hash']) for i in invoices):
-        raise ValueError('Duplicate detected: supplier reference or file already submitted in this session.')
+        raise ValueError('Duplicate detected: supplier reference or file already submitted in this workspace.')
     payload = {'siren': siren, 'reference': canonical(reference), 'amount': money(amount), 'due': due.isoformat(), 'buyer': canonical(buyer)}
     return dict(id=uuid4().hex[:8].upper(), key=key, seller=seller.strip(), siren=siren, buyer=buyer.strip(),
                 reference=reference.strip(), amount=money(amount), issued=issued.isoformat(), due=due.isoformat(),
@@ -56,10 +56,51 @@ def new_invoice(invoices, *, seller, siren, buyer, reference, amount, issued, du
                 buyer_status='Pending', status='To review', note='', financing=None, outcome=None)
 
 
-def eligible(i):
+def financing_checks(i):
+    """One source of truth for eligibility and its human-readable explanations."""
     value, _ = score(i)
-    return (i['status'] == 'Approved' and i['buyer_status'] == 'Confirmed' and i['documents']
-            and i['identity'] and value >= 65 and date.fromisoformat(i['due']) > date.today())
+    processed = i['status'] in ('Financed', 'Closed') or i.get('financing') is not None
+    disputed = i['buyer_status'] == 'Disputed' or i['status'] == 'Disputed'
+    return [
+        ('Available for financing', not processed,
+         'This invoice has already been financed or closed.'),
+        ('Buyer confirmation', i['buyer_status'] == 'Confirmed',
+         'The invoice is disputed by the buyer.' if disputed else 'Buyer confirmation is missing.'),
+        ('SME identity', bool(i['identity']), 'SME identity verification is incomplete.'),
+        ('Complete documents (declared)', bool(i['documents']),
+         'Supporting documents are incomplete: invoice, purchase order or proof of delivery.'),
+        ('Future due date', date.fromisoformat(i['due']) > date.today(),
+         'The due date has been reached or has passed.'),
+        ('Demo score at least 65/100', value >= 65,
+         'The demo score is below 65/100. Manual review is required; financing stays blocked.'),
+        ('Invoice approval', i['status'] == 'Approved',
+         'Invoice approval is incomplete.'),
+    ]
+
+
+def financing_blockers(i):
+    return [message for _, passed, message in financing_checks(i) if not passed]
+
+
+def eligible(i):
+    return not financing_blockers(i)
+
+
+def complete_checks(i, identity, documents):
+    if i['status'] in ('Financed', 'Closed') or i.get('financing'):
+        raise ValueError('A financed or closed invoice cannot be changed.')
+    i.update(identity=bool(identity), documents=bool(documents))
+
+
+def journey(i):
+    funded = bool(i.get('financing'))
+    return [
+        ('Submitted', True),
+        ('Confirmed', funded or i['buyer_status'] == 'Confirmed'),
+        ('Eligible', funded or eligible(i)),
+        ('Financed', funded),
+        ('Paid', i.get('outcome') == 'Paid'),
+    ]
 
 
 def confirm(i, approved, note=''):

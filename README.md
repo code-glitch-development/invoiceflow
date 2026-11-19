@@ -42,15 +42,19 @@ Les factures et leurs financements sont conservés. Validez un formulaire ouvert
 5. Open **Portfolio** to export CSV or JSON, and simulate late payment, a dispute, insolvency or full payment.
 6. Use **Simulator** independently to explore advances, losses and hypothetical monthly and annual fee revenue.
 
-Use the sidebar to reset the demo. Example due dates are relative to the current date.
+The **Invoice progress** view shows Submitted → Confirmed → Eligible → Financed → Paid. Its next-step button opens the right role, page and invoice automatically. Select any invoice in Overview or Portfolio to resume its journey.
+
+The **Invoice checks** page lets the SME complete simulated identity/document checks without changing confirmed invoice terms. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Low scores, disputes and expired due dates are never bypassed.
+
+Use the sidebar to reset the shared demo. Resetting replaces the data for every visitor. Example due dates are relative to the date the database is first initialized or reset.
 
 ## Model and limitations
 
 - Roles are freely interchangeable for presentation purposes: there is no authentication or access control.
-- Data lives in `st.session_state`, without a database or sharing across browsers. Ending or reconnecting a session may lose the data. JSON export is provided; importing backups is not implemented.
+- Invoice records are automatically stored in SQLite, shared across all visitors on one server. Closing a browser or opening another session does not delete them while the database file remains available. There is no authentication: use fictional data only. JSON export is provided; importing backups is not implemented.
 - Existing sessions from the French version have their predefined statuses and risk categories migrated automatically. User-entered names, references and comments are preserved.
 - Optional PDF / PNG / JPEG upload, maximum 10 MB. Only the fingerprint is retained; no OCR, automatic extraction or document archive.
-- Duplicate detection is limited to the current session: SIREN plus normalized reference, or an identical SHA-256 file fingerprint. It cannot detect assignments on other platforms or every modified version of an invoice.
+- Duplicate detection covers the saved workspace: SIREN plus normalized reference, or an identical SHA-256 file fingerprint. It cannot detect assignments on other platforms or every modified version of an invoice.
 - SIREN validation checks the 9-digit format only, without checking company existence. Identity, documentation and financial information are simulated declarations.
 - Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
 - Transparent score out of 100: financial strength 40/25/5; payment history 25/15/0; buyer confirmation 25; documents 10. Financing requires a score ≥ 65, identity and documents declared complete, buyer confirmation and a future due date. The score is not a probability of default.
@@ -62,7 +66,19 @@ Use the sidebar to reset the demo. Example due dates are relative to the current
 
 ## Deploy to Streamlit Community Cloud
 
-Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required. Each browser session keeps its own data.
+Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. All visitors share the same saved demo dataset.
+
+**Persistence limit:** Streamlit Community Cloud does not guarantee persistence of local files. A restart, redeployment or host cleanup may remove the SQLite file. This implementation therefore preserves data across browser sessions while the file exists, but does not promise durable storage on Community Cloud. For durable hosting, run the app with a persistent disk and set `INVOICEFLOW_DB_PATH` to a path on that disk, or add an external database backend before relying on long-term Cloud storage. See the [official persistence note](https://docs.streamlit.io/develop/concepts/connections/connecting-to-data).
+
+## Database operations
+
+Default location: `data/invoiceflow.db`, relative to `app.py`. It is created automatically on first launch. Set the `INVOICEFLOW_DB_PATH` environment variable to use another location. SQLite is included with Python; no extra dependency is required.
+
+Only an uninitialized database receives the example dataset. Existing records are loaded on every rerun. A legacy in-memory session is imported on first initialization when available. Saved samples keep their original due dates; use Reset demo for fresh examples.
+
+Each change updates one invoice in a transaction. A version check rejects stale writes, and database uniqueness constraints reject repeated supplier references and identical file hashes across sessions. Failed saves do not show a success message or replace saved data. Reset is atomic.
+
+Back up the SQLite file while the application is stopped. Database files, uploaded documents, secrets and local data are excluded from Git. The JSON export is also available for review; it is not an automatic restore mechanism.
 
 ## Tests
 
@@ -70,14 +86,15 @@ Select the GitHub repository, the `main` branch and `app.py` as the main file. N
 python -m unittest -v
 ```
 
-`test_engine.py` covers calculations, duplicates, eligibility, disputes, the financing/payment lifecycle and migration of existing French sessions. `test_i18n.py` checks translation templates, localized exports and preservation of business values. `test_ui.py` covers both languages, all screens and language switching during the investor workflow using the Streamlit test runner.
+`test_engine.py` covers calculations, duplicates, eligibility explanations, file completion, progress history, disputes, the financing/payment lifecycle and migration of existing French sessions. `test_storage.py` covers reopening the database, saved financing, cross-session duplicates, stale writes, atomic reset and storage errors. `test_i18n.py` checks translation templates, localized exports and preservation of business values. `test_ui.py` covers both languages, all screens and language switching during the investor workflow using the Streamlit test runner.
 
 ## Files
 
 - `app.py`: Streamlit interface and workflows.
 - `i18n.py`: English/French presentation translations.
+- `storage.py`: transactional SQLite persistence.
 - `engine.py`: business rules, calculations, sample data and session migration.
 - `requirements.txt`: dependencies.
 - `.streamlit/config.toml`: theme and upload limit.
-- `test_engine.py`, `test_i18n.py`, `test_ui.py`: automated tests.
+- `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
 - `VERIFICATION.md`: validation performed and limitations.

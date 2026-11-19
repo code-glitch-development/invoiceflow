@@ -27,6 +27,12 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                    '· Couverture '
                                                                                    'hypothétique : **{p2} '
                                                                                    '%** · {p3}',
+ 'All requirements are met. This invoice is eligible for simulated financing.': 'Toutes les conditions sont '
+                                                                                'remplies. Cette facture est '
+                                                                                'éligible au financement '
+                                                                                'simulé.',
+ 'All steps completed. Payment has been simulated.': 'Toutes les étapes sont terminées. Le règlement a été '
+                                                     'simulé.',
  'Amount (€)': 'Montant (€)',
  'Approved': 'Validée',
  'At constant volume, before all expenses. This simulation is not a business forecast.': 'À volume constant, '
@@ -36,6 +42,7 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                          'constitue pas une '
                                                                                          'prévision '
                                                                                          'commerciale.',
+ 'Available for financing': 'Disponible pour le financement',
  'Average': 'Intermédiaire',
  'Before capital costs, insurance, losses and operating expenses. Coverage is hypothetical; no insurer is connected.': 'Avant '
                                                                                                                        'coût '
@@ -58,7 +65,16 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                        'connecté.',
  'Buyer': 'Client final',
  'Buyer confirmation': 'Validation client',
+ 'Buyer confirmation is missing.': 'La confirmation du client est manquante.',
  'Capital at risk after insurance': 'Capital exposé après assurance',
+ 'Changes are saved automatically. Closing your browser does not delete saved invoices.': 'Les modifications '
+                                                                                          'sont enregistrées '
+                                                                                          'automatiquement. '
+                                                                                          'Fermer le '
+                                                                                          'navigateur ne '
+                                                                                          'supprime pas les '
+                                                                                          'factures '
+                                                                                          'sauvegardées.',
  'Check': 'Contrôle',
  'Check the confirmation box to approve the invoice.': 'Cochez la confirmation des informations pour '
                                                        'valider.',
@@ -66,14 +82,44 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Clear the data in this session': 'Effacer les données de cette session',
  'Closed': 'Clôturée',
  'Comment · required for a dispute': 'Commentaire · obligatoire en cas de contestation',
+ 'Complete an invoice file': 'Compléter un dossier de facture',
  'Complete documents (declared)': 'Pièces complètes (déclarées)',
  'Confirm': 'Confirmer',
  'Confirm or dispute the service.': 'Validation ou contestation de la prestation.',
  'Confirm your supplier invoices': 'Confirmez les factures de vos fournisseurs',
  'Confirmed': 'Confirmée',
  'Confirmée': 'Confirmerée',
+ 'Continue an invoice': 'Poursuivre le traitement d’une facture',
+ 'Continue with the form and requirements below.': 'Poursuivez avec le formulaire et les conditions '
+                                                   'ci-dessous.',
  'Covered insolvency': 'Insolvabilité couverte',
  'Criterion': 'Critère',
+ 'Current invoice: {reference}': 'Facture sélectionnée : {reference}',
+ 'Database register, without blockchain. A fingerprint proves neither delivery of the service nor the absence of assignment on another platform.': 'Registre '
+                                                                                                                                                   'en '
+                                                                                                                                                   'base '
+                                                                                                                                                   'de '
+                                                                                                                                                   'données, '
+                                                                                                                                                   'sans '
+                                                                                                                                                   'blockchain. '
+                                                                                                                                                   'Une '
+                                                                                                                                                   'empreinte '
+                                                                                                                                                   'ne '
+                                                                                                                                                   'prouve '
+                                                                                                                                                   'ni '
+                                                                                                                                                   'la '
+                                                                                                                                                   'réalisation '
+                                                                                                                                                   'de '
+                                                                                                                                                   'la '
+                                                                                                                                                   'prestation '
+                                                                                                                                                   'ni '
+                                                                                                                                                   'l’absence '
+                                                                                                                                                   'de '
+                                                                                                                                                   'cession '
+                                                                                                                                                   'sur '
+                                                                                                                                                   'une '
+                                                                                                                                                   'autre '
+                                                                                                                                                   'plateforme.',
  'Debtor financial strength (declared)': 'Solidité du débiteur (déclarée)',
  'Decision': 'Décision',
  'Decision saved.': 'Décision enregistrée.',
@@ -103,6 +149,7 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Demo rules, with no connection to financial services.': 'Démonstration rules, with no connection to '
                                                           'financial services.',
  'Demo score': 'Score pédagogique',
+ 'Demo score at least 65/100': 'Score pédagogique d’au moins 65/100',
  'Details, documents and duplicate checks.': 'Informations, pièces et contrôle des doublons.',
  'Dispute': 'Litige',
  'Dispute / fraud': 'Contestation / fraude',
@@ -111,11 +158,21 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Disputed': 'Contestée',
  'Documents declared complete': 'Pièces déclarées complètes',
  'Due date': 'Date d’échéance',
+ 'Duplicate detected: supplier reference or file already exists in the database.': 'Doublon détecté : la '
+                                                                                   'référence fournisseur ou '
+                                                                                   'le fichier existe déjà '
+                                                                                   'dans la base.',
  'Duplicate detected: supplier reference or file already submitted in this session.': 'Doublon détecté : '
                                                                                       'référence fournisseur '
                                                                                       'ou fichier déjà '
                                                                                       'déposé dans cette '
                                                                                       'session.',
+ 'Duplicate detected: supplier reference or file already submitted in this workspace.': 'Doublon détecté : '
+                                                                                        'la référence '
+                                                                                        'fournisseur ou le '
+                                                                                        'fichier a déjà été '
+                                                                                        'déposé dans cet '
+                                                                                        'espace.',
  'E.g. Atelier Nova': 'Ex. Atelier Nova',
  'E.g. Groupe Horizon': 'Ex. Groupe Horizon',
  'Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.': 'Prototype '
@@ -135,10 +192,12 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                           'Aucun '
                                                                                                           'transfert '
                                                                                                           'd’argent.',
+ 'Eligible': 'Finançable',
  'Eligible for financing simulation': 'Éligibles à la simulation',
  'Enter the supplier, buyer and reference.': 'Renseignez le fournisseur, le client et la référence.',
  'Event to simulate': 'Événement à simuler',
  'Explore financing scenarios': 'Testez vos hypothèses de financement',
+ 'Export saved invoices as JSON': 'Exporter les factures enregistrées en JSON',
  'Export session as JSON': 'Exporter la session en JSON',
  'Export view as CSV': 'Exporter la vue en CSV',
  'Fee (%)': 'Commission (%)',
@@ -147,11 +206,14 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Finance confirmed invoices': 'Financez des factures confirmées',
  'Financed': 'Financée',
  'Financing': 'Financement',
+ 'Financing is blocked for the following reasons:': 'Le financement est bloqué pour les raisons suivantes :',
+ 'Financing requirements': 'Conditions de financement',
  'Frequent delays': 'Retards fréquents',
  'From upload to early payment': 'Du dépôt au paiement anticipé',
  'Full payment': 'Paiement intégral',
  'Full payment simulated. Hypothetical gross margin: {p0}.': 'Règlement intégral simulé. Marge brute '
                                                              'théorique : {p0}.',
+ 'Future due date': 'Échéance future',
  'Gross fee': 'Commission brute',
  'Gross margin if paid in full': 'Marge brute si règlement intégral',
  'Hypothetical annual fee revenue': 'Commission annuelle théorique',
@@ -202,6 +264,11 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Invoice amount': 'Montant de la facture',
  'Invoice amount (€)': 'Montant de la facture (€)',
  'Invoice and transaction tracking': 'Suivi des factures et des opérations',
+ 'Invoice approval': 'Approbation de la facture',
+ 'Invoice approval is incomplete.': 'L’approbation de la facture est incomplète.',
+ 'Invoice checks': 'Contrôles de facture',
+ 'Invoice checks saved.': 'Contrôles de la facture enregistrés.',
+ 'Invoice progress': 'Progression de la facture',
  'Invoice reference': 'Référence de facture',
  'Invoice {p0} submitted. Switch to the Buyer role to confirm it.': 'Facture {p0} déposée. Passez au profil '
                                                                     'Client final pour la confirmer.',
@@ -259,10 +326,15 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                                                  'de '
                                                                                                                                                  'défaut.',
  'Model outcome': 'Conséquence dans le modèle',
+ 'Next: buyer confirmation': 'Étape suivante : confirmation client',
+ 'Next: complete invoice checks': 'Étape suivante : compléter les contrôles',
+ 'Next: simulate financing': 'Étape suivante : simuler le financement',
+ 'Next: track payment': 'Étape suivante : suivre le règlement',
  'No coverage assumed; exposure may reach the full advance.': 'Couverture non supposée ; exposition pouvant '
                                                               'atteindre la totalité de l’avance.',
  'No final loss calculated; financing period extended.': 'Pas de perte définitive calculée ; durée du '
                                                          'financement prolongée.',
+ 'No invoice files to complete.': 'Aucun dossier de facture à compléter.',
  'No invoices available.': 'Aucune facture disponible.',
  'No invoices to process for this buyer.': 'Aucune facture à traiter pour ce client.',
  'No official checks, OCR or contact with a real buyer. The upload checkboxes are demo declarations.': 'Aucun '
@@ -309,6 +381,7 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Original invoice · PDF, PNG or JPEG · 10 MB max.': 'Facture originale · PDF, PNG ou JPEG · 10 Mo max.',
  'Overview': 'Vue d’ensemble',
  'Paid': 'Payée',
+ 'Passed': 'Validé',
  'Payment history (declared)': 'Historique de paiement (déclaré)',
  'Payment pending. No collected revenue or automatic indemnity assumed.': 'Règlement en attente. Aucun '
                                                                           'revenu encaissé ni indemnisation '
@@ -339,19 +412,30 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                                              'demeure.',
  'Reference': 'Référence',
  'Reload examples': 'Recharger les exemples',
+ 'Replace the shared demo data for all visitors': 'Remplacer les données du démonstrateur pour tous les '
+                                                  'visiteurs',
  'Represented buyer (simulation)': 'Client représenté (simulation)',
  'Requirements not met: financing is unavailable for this invoice.': 'Conditions non remplies : financement '
                                                                      'indisponible pour cette facture.',
  'Reset demo': 'Réinitialiser la démo',
+ 'Resolve the requirements listed above before financing.': 'Complétez les conditions indiquées ci-dessus '
+                                                            'avant de financer.',
  'Result': 'Résultat',
  'Revenue simulation': 'Simulation de chiffre d’affaires',
+ 'Review financing blockers': 'Voir les blocages du financement',
  'SHA-256 fingerprint of metadata': 'Empreinte SHA-256 des métadonnées',
  'SIREN · 9-digit format': 'SIREN · format de 9 chiffres',
  'SME': 'PME',
  'SME identity': 'Identité PME',
+ 'SME identity verification is incomplete.': 'La vérification de l’identité de la PME est incomplète.',
  'SME name': 'Nom de la PME',
  'Save decision': 'Enregistrer la décision',
+ 'Save invoice checks': 'Enregistrer les contrôles',
  'Save tracking update': 'Enregistrer le suivi',
+ 'Saved data could not be read. Restore a database backup before continuing.': 'Les données enregistrées '
+                                                                               'sont illisibles. Restaurez '
+                                                                               'une sauvegarde de la base '
+                                                                               'avant de poursuivre.',
  'Scenario': 'Scénario',
  'Score breakdown': 'Barème du score',
  'Score, fee and coverage scenario.': 'Score, commission et scénario de couverture.',
@@ -359,6 +443,8 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                             'confirmer ou contester une facture.',
  'Select the Investor role to simulate financing.': 'Sélectionnez le profil Investisseur pour simuler un '
                                                     'financement.',
+ 'Select the SME role to complete invoice checks.': 'Sélectionnez le profil PME pour compléter les '
+                                                    'contrôles.',
  'Select the SME role to upload an invoice.': 'Sélectionnez le profil PME pour déposer une facture.',
  'Service details need clarification in this fictional scenario.': 'Prestation à clarifier dans ce scénario '
                                                                    'fictif.',
@@ -433,6 +519,7 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Status': 'Statut',
  'Strong': 'Solide',
  'Submit invoice': 'Déposer la facture',
+ 'Submitted': 'Déposée',
  'Submitted volume': 'Volume déposé',
  'Suggested journey: SME → upload; Buyer → confirmation; Investor → financing; Portfolio → payment tracking.': 'Parcours '
                                                                                                                'conseillé '
@@ -456,18 +543,60 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                'du '
                                                                                                                'règlement.',
  'Supplier reference and file checked': 'Référence fournisseur et fichier contrôlés',
+ 'Supporting documents are incomplete: invoice, purchase order or proof of delivery.': 'Les justificatifs '
+                                                                                       'sont incomplets : '
+                                                                                       'facture, bon de '
+                                                                                       'commande ou preuve '
+                                                                                       'de livraison.',
  'The SIREN must contain 9 digits (format check only).': 'Le SIREN doit contenir 9 chiffres (format '
                                                          'uniquement).',
+ 'The database is unavailable. No changes were saved. Please try again.': 'La base de données est '
+                                                                          'indisponible. Aucune modification '
+                                                                          'n’a été enregistrée. Réessayez.',
+ 'The demo score is below 65/100. Manual review is required; financing stays blocked.': 'Le score est '
+                                                                                        'inférieur à 65/100. '
+                                                                                        'Une étude manuelle '
+                                                                                        'est nécessaire ; le '
+                                                                                        'financement reste '
+                                                                                        'bloqué.',
+ 'The due date has been reached or has passed.': 'La date d’échéance est atteinte ou dépassée.',
+ 'The invoice is disputed by the buyer.': 'La facture est contestée par le client.',
  'The issue date must be today or earlier and the due date must be in the future.': 'La date d’émission doit '
                                                                                     'être passée ou actuelle '
                                                                                     'et l’échéance future.',
  'The supplier and buyer must be different.': 'Le fournisseur et le client doivent être différents.',
+ 'These checks are simulated declarations. No official company or document verification is performed.': 'Ces '
+                                                                                                        'contrôles '
+                                                                                                        'sont '
+                                                                                                        'des '
+                                                                                                        'déclarations '
+                                                                                                        'simulées. '
+                                                                                                        'Aucune '
+                                                                                                        'vérification '
+                                                                                                        'officielle '
+                                                                                                        'de '
+                                                                                                        'l’entreprise '
+                                                                                                        'ou '
+                                                                                                        'des '
+                                                                                                        'documents '
+                                                                                                        'n’est '
+                                                                                                        'effectuée.',
+ 'This invoice changed in another session. Reload the latest data before trying again.': 'Cette facture a '
+                                                                                         'été modifiée dans '
+                                                                                         'une autre session. '
+                                                                                         'Rechargez les '
+                                                                                         'dernières données '
+                                                                                         'avant de '
+                                                                                         'réessayer.',
  'This invoice does not meet the demo financing requirements.': 'Cette facture ne remplit pas les conditions '
                                                                 'de financement de la démo.',
+ 'This invoice has already been financed or closed.': 'Cette facture a déjà été financée ou clôturée.',
+ 'To complete': 'À compléter',
  'To review': 'À vérifier',
  'Tracking': 'Suivi',
  'Tracking updated.': 'Suivi mis à jour.',
  'Uniqueness within this session': 'Unicité dans la session',
+ 'Uniqueness within this workspace': 'Unicité dans cet espace',
  'Unknown event.': 'Événement inconnu.',
  'Unlock your cash flow': 'Libérez votre trésorerie',
  'Upload an invoice': 'Déposer une facture',
@@ -503,7 +632,29 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                                                    'à '
                                                                                                                                                    'sa '
                                                                                                                                                    'fermeture.',
- '{p0}/100 · threshold 65': '{p0}/100 · seuil 65'}
+ '{p0}/100 · threshold 65': '{p0}/100 · seuil 65',
+ '{profile} workspace · Roles are interchangeable for the demo. Saved invoices are shared across visitors on this server; there is no authentication.': 'Espace '
+                                                                                                                                                        '{profile} '
+                                                                                                                                                        '· '
+                                                                                                                                                        'Les '
+                                                                                                                                                        'profils '
+                                                                                                                                                        'sont '
+                                                                                                                                                        'interchangeables '
+                                                                                                                                                        'pour '
+                                                                                                                                                        'la '
+                                                                                                                                                        'démonstration. '
+                                                                                                                                                        'Les '
+                                                                                                                                                        'factures '
+                                                                                                                                                        'enregistrées '
+                                                                                                                                                        'sont '
+                                                                                                                                                        'communes '
+                                                                                                                                                        'aux '
+                                                                                                                                                        'visiteurs '
+                                                                                                                                                        'de '
+                                                                                                                                                        'ce '
+                                                                                                                                                        'serveur, '
+                                                                                                                                                        'sans '
+                                                                                                                                                        'authentification.'}
 
 
 class Translator:

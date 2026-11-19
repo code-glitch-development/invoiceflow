@@ -6,3 +6,8 @@ venv/
 .env.*
 .streamlit/secrets.toml
 .DS_Store
+
+data/
+*.db
+*.db-*
+*.sqlite*
