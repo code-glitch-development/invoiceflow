@@ -22,14 +22,46 @@ class InterfaceTests(unittest.TestCase):
         return AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20).run()
 
     def test_all_screens(self):
+        from workspaces import WORKSPACES
         at = self.app()
         for profile in ['SME', 'Buyer', 'Investor']:
             at.sidebar.selectbox(key='ui_demo_role').set_value(profile).run()
-            for page in ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer confirmation', 'Financing', 'Simulator', 'Portfolio']:
+            for page in WORKSPACES[profile]['pages']:
                 at.sidebar.radio(key='ui_navigation').set_value(page).run()
                 for language in ['FR', 'EN']:
                     at.sidebar.radio(key='language').set_value(language).run()
                     self.assertFalse(at.exception, (language, profile, page, list(at.exception)))
+
+    def test_role_switch_changes_interface_and_preserves_records(self):
+        from i18n import Translator
+        from workspaces import WORKSPACES, overview
+        at = self.app()
+        records = [dict(i) for i in at.session_state['invoices']]
+        for language in ['EN', 'FR']:
+            at.sidebar.radio(key='language').set_value(language).run()
+            translate = Translator(language).text
+            for role in ['Buyer', 'Investor', 'SME']:
+                at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
+                self.assertFalse(at.exception)
+                self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Overview')
+                self.assertEqual(at.sidebar.radio(key='ui_navigation').options,
+                                 [translate(p) for p in WORKSPACES[role]['pages']])
+                expected, items = overview(role, records)
+                self.assertEqual([m.label for m in at.metric], [translate(m[0]) for m in expected])
+                self.assertTrue(any(translate(WORKSPACES[role]['headline']) in m.value for m in at.markdown))
+                self.assertEqual(at.session_state['invoices'], records)
+                at.button(key='workspace_primary_action').click().run()
+                self.assertEqual(at.sidebar.radio(key='ui_navigation').value, WORKSPACES[role]['target'])
+                self.assertFalse(at.exception)
+
+    def test_language_change_keeps_role_page(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Buyer').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'Buyer')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer confirmation')
 
     def test_financing_and_payment(self):
         at = self.app()
@@ -69,3 +101,4 @@ class InterfaceTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

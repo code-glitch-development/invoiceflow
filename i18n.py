@@ -657,6 +657,33 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
                                                                                                                                                         'authentification.'}
 
 
+FR.update({
+    'SME workspace': 'Espace PME',
+    'Buyer workspace': 'Espace client final',
+    'Investor workspace': 'Espace investisseur',
+    'Turn your invoices into cash flow.': 'Transformez vos factures en trésorerie.',
+    'Review your supplier invoices.': 'Vérifiez les factures de vos fournisseurs.',
+    'Explore eligible invoices.': 'Explorez les factures éligibles.',
+    'Submit an invoice, complete its file and follow its financing.':
+        'Déposez une facture, complétez son dossier et suivez son financement.',
+    'Check the service, amount and due date, then confirm or dispute.':
+        'Vérifiez la prestation, le montant et l’échéance, puis confirmez ou contestez.',
+    'Review eligibility, simulate an advance and track your portfolio.':
+        'Analysez l’éligibilité, simulez une avance et suivez votre portefeuille.',
+    'Your submitted invoices': 'Vos factures déposées',
+    'Supplier invoices awaiting your decision': 'Factures fournisseurs en attente de votre décision',
+    'Invoices eligible for a financing simulation': 'Factures éligibles à une simulation de financement',
+    'Review supplier invoices': 'Vérifier les factures fournisseurs',
+    'Explore financing': 'Explorer les financements',
+    'Invoice files to complete': 'Dossiers de factures à compléter',
+    'Amount awaiting confirmation': 'Montant en attente de confirmation',
+    'Disputed invoices': 'Factures contestées',
+    'Eligible invoice volume': 'Volume de factures éligibles',
+    'Outstanding simulated advances': 'Encours des avances simulées',
+    'No invoices in this workspace queue.': 'Aucune facture en attente dans cet espace.',
+})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language
@@ -674,3 +701,4 @@ def localize_frame(frame, translate):
         if column not in user_columns:
             result[column] = result[column].map(lambda value: translate(value) if isinstance(value, str) else value)
     return result.rename(columns=translate)
+
