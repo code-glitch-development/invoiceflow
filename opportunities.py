@@ -65,7 +65,7 @@ def review_selection(entries, selected_ids, budget, portfolio):
             raise ValueError('The selection changed. Review the latest offers before confirming.')
         chosen.append(available[identifier])
     total = money(sum(e['report']['advance'] for e in chosen))
-    if total > money(budget):
+    if total > budget:
         raise ValueError('The total advance exceeds your budget.')
     return dict(rows=deepcopy(chosen), budget=budget, advance=total,
                 gross_gain=money(sum(e['report']['gross_discount'] for e in chosen)),

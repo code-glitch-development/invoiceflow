@@ -52,6 +52,8 @@ class OpportunityTests(unittest.TestCase):
         self.assertEqual(len(visible), 3)
         with self.assertRaisesRegex(ValueError, 'budget'):
             self.review(budget=16000)
+        with self.assertRaisesRegex(ValueError, 'budget'):
+            self.review(ids=[self.ids[0]], budget=self.entries[0]['report']['advance'] - 0.001)
 
     def test_empty_duplicate_and_unavailable_selection_rejected(self):
         for ids in [[], [self.ids[0]] * 2, ['missing']]:

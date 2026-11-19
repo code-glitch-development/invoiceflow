@@ -89,7 +89,7 @@ def comparison(chosen, portfolio, budget, t, euro):
     data = {t('Criterion'): [t(label) for label in criteria]}
     for entry in chosen:
         i, r = entry['invoice'], entry['report']
-        data[i['reference']] = [i['buyer'], euro(r['advance']),
+        data[i['reference'] + ' · ' + i['id']] = [i['buyer'], euro(r['advance']),
             t('{days} days', days=r['horizon_days']), f"{r['annual_rate_percent']:.2f}",
             f"{r['assumptions']['annual_pd_percent']:.2f}", f"{r['assumptions']['lgd_percent']:.1f}",
             euro(i['amount']), euro(r['gross_discount']),
@@ -128,7 +128,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.session_state.setdefault('inv_scenario', 'All')
     with st.container(border=True):
         a, b, c, d = st.columns([1.2, 1.1, 1, 1])
-        budget = a.number_input(t('Total budget (€)'), min_value=1.0, step=1000.0, key='inv_budget')
+        budget = a.number_input(t('Total budget (€)'), min_value=1.0, max_value=1000000000.0, step=1000.0, key='inv_budget')
         horizon = b.selectbox(t('Maximum payment horizon'), [30, 60, 90, 180, 365, 36500],
             format_func=lambda days: t('{days} days', days=days), key='inv_horizon')
         scenario = c.selectbox(t('Scenario'), ['All'] + list(SCENARIOS), format_func=t, key='inv_scenario')
