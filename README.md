@@ -69,7 +69,7 @@ Use the sidebar to reset the shared demo. Resetting replaces the data for every 
 - SIREN validation checks the 9-digit format only, without checking company existence. Identity, documentation and financial information are simulated declarations.
 - Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
 - Transparent score out of 100: financial strength 40/25/5; payment history 25/15/0; buyer confirmation 25; documents 10. Financing requires a score ≥ 65, identity and documents declared complete, buyer confirmation and a future due date. The score is not a probability of default.
-- Fee = face value × fee rate. Advance = face value − fee. No annualized interest or guaranteed return is quoted.
+- Fee = face value × fee rate. Advance = face value − fee. This remains a one-off fee; a separate annual rate powers the investor future-value simulation below. Neither value is a guaranteed return.
 - Insolvency indemnity = min(advance, face value × hypothetical coverage). Residual capital = advance − indemnity. For a €10,000 invoice, 4% fee and 80% coverage: €9,600 advanced, €8,000 hypothetical indemnity and €1,600 residual capital at risk. This differs from the €2,000 of uncovered face value.
 - Recourse is modeled as a potential claim against the SME for the residual capital after indemnification. Recovery is uncertain and does not eliminate lender exposure. No insurance coverage is assumed for disputes or fraud.
 - Simplified assumptions exclude deductibles, waiting periods, contractual limits, recoveries, financing costs and insurance premiums. Non-recourse is not presented as universal protection.
@@ -93,6 +93,28 @@ Each change updates one invoice in a transaction. A version check rejects stale 
 
 Back up the SQLite file while the application is stopped. Database files, uploaded documents, secrets and local data are excluded from Git. The JSON export is also available for review; it is not an automatic restore mechanism.
 
+## Investor future value
+
+The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capital advanced to the SME, `r` is the annual continuous-interest rate expressed as a percentage (5 means 5%), and `t` is years without payment. Default Financing now derives the advance and rate jointly from documented risk/cost assumptions. The independent manual mode and Simulator retain a 5% illustrative starting value. Future value is never added a second time to fees, insurance indemnity or collected income.
+
+- **Financing:** use risk-based pricing by default, or explicitly select the independent manual demonstration. Simulating funding saves the date, rate and advance, plus the complete risk-pricing snapshot when applicable.
+- **Portfolio:** future value, theoretical interest and elapsed days are calculated automatically when the view is loaded or refreshed. Time starts on the financing date, including days before the invoice due date. Calendar days are divided by 365, including actual leap-year days (Actual/365 fixed). Today's date uses Europe/Paris. A projection-date toggle lets investors explore longer periods without payment.
+- **Payment:** a simulated full payment records the payment date. Calculations stop on that date, even when a later projection date is selected. Late payment, insolvency or dispute does not itself simulate cash collection; any continuing exponential growth is only a theoretical scenario.
+- **Existing records:** the app never invents missing financing/payment dates or retroactively changes saved amounts. The investor can explicitly configure missing dates and an annual assumption. A recorded financing date cannot be changed; the rate remains editable as a simulation assumption.
+- **Simulator:** enter the time directly in years (fractional values are supported). Calculations always use the original advance and total elapsed time, so repeated reruns cannot compound the same period twice. Interest settings and payment dates survive database reopening and are included in JSON exports.
+
+The mathematical convention is continuous compounding; see [OpenStax](https://openstax.org/books/college-algebra-corequisite-support/pages/6-1-exponential-functions). This model does not establish contractual interest, penalties, collectible debt or guaranteed payment.
+
+## Risk-sensitive pricing
+
+Open **Investor → Financing**. Default risk pricing now starts with an **internal fictional annual cohort**: four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the demo score or declared payment-history dropdown does not automatically assign a buyer to a cohort.
+
+The screen shows numerator, denominator, annual period and data origin. PD and cohort provenance are read-only; costs and recovery assumptions remain adjustable. Cohort counts/version are checked on pricing and saved in the JSON report. Switching to manual PD inputs permits explicit alternative assumptions; missing inputs/source still block funding. No credit-data provider or external API is required for the default demonstration.
+
+The model scales one-year PD to the actual tenor using constant survival intensity, prices the maximum advance from expected discounted performing/default cash flows, and derives the annual continuous equivalent. It accounts separately for expected collection delay, recovery lag, upfront costs and effective annual funding/capital/margin budgets. Missing/old data and the configured rate limit can block an offer. Existing workflow requirements remain binding.
+
+The screen exposes the cash-flow breakdown, mechanical stress sensitivities and a downloadable JSON calculation report. Funding rechecks the quote and persists its assumptions; saved risk-based rates cannot be overwritten through the legacy interest editor. The full model derivation, assumptions, example and empirical calibration requirements are in [PRICING_MODEL.md](PRICING_MODEL.md). Mathematical tests do not establish that assumed PD/LGD predict real losses.
+
 ## Tests
 
 ```bash
@@ -107,6 +129,10 @@ python -m unittest -v
 - `invoice_extraction.py`: local PDF text extraction, OCR, labelled-field parsing and session prefill.
 - `packages.txt`: OCR executable and language dependencies for Community Cloud.
 - `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
+- `future_value.py`: continuous compounding, Actual/365 duration and payment-date stopping.
+- `risk_pricing.py`, `pricing_ui.py`: documented expected-cash-flow pricing and investor controls.
+- `demo_pd.py`: fictional completed-year borrower aggregates and observed default-rate calculation.
+- `PRICING_MODEL.md`: derivation, conventions, limitations and calibration requirements.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
 - `engine.py`: business rules, calculations, sample data and session migration.
@@ -114,6 +140,33 @@ python -m unittest -v
 - `.streamlit/config.toml`: theme and upload limit.
 - `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
 - `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
+- `test_future_value.py`: percentage/year conversion, invalid inputs, no double compounding, legacy records and payment stopping. Storage and interface tests also cover saved interest settings and projections.
+- `test_risk_pricing.py`: horizon PD, cash-flow consistency, policy blocks, sensitivities, saved snapshots and prevention of double charging.
+- `test_demo_pd.py`: aggregate consistency, completed annual windows, fictional provenance and cohort validation.
 - `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 
+
+### Investor opportunity workspace
+
+The Investor home shows eligible invoices as cards with model-priced advances,
+expected payment dates, and gross gains conditional on full payment, before costs.
+Filter by total budget, expected payment horizon (including the assumed delay),
+and fictional borrower scenario. Select up to three whole invoices; filtered-out
+selections remain in the comparator and count toward the total budget.
+
+The comparator and selection summary show aggregate capital and exposure by
+buyer name. `Simulation assumptions` sets a common scenario per buyer and shared
+pricing costs. These scenarios use the existing fictional annual cohorts, not
+calibrated client ratings. Adding transactions cannot dilute their annual PD.
+The detailed financing and simulator screens remain accessible.
+
+`Simulate this selection` opens a review. Confirmation rechecks invoice versions,
+eligibility, current quotes, and the aggregate budget inside one database
+transaction. Either the entire selection is recorded or none is. Changes to
+quotes, budget, selection, or the shared portfolio invalidate the review. No
+money is transferred. Existing financed invoices retain their saved pricing.
+
+New workspaces include two extra fictional eligible invoices. For an existing
+database, use `Add investor examples` under `Demo data and unavailable offers`;
+this appends missing examples without replacing existing records.
