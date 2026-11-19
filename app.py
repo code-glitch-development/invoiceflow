@@ -217,7 +217,9 @@ elif page == 'Upload an invoice':
             # Removing a file keeps the user's draft but permits a fresh extraction on re-upload.
             st.session_state.pop('invoice_prefill_digest', None)
             st.session_state.pop('invoice_prefill', None)
-        with st.form('upload', clear_on_submit=False):
+        # Individual widgets commit draft edits on rerun, including language changes.
+        # Business data is still saved only by the explicit submit button below.
+        with st.container():
             a, b = st.columns(2)
             seller = a.text_input(t('SME name'), placeholder=t('E.g. Atelier Nova'), key='ui_sme_name', value=st.session_state.get('ui_sme_name', ''))
             siren = b.text_input(t('SIREN · 9-digit format'), max_chars=9, key='ui_siren_9_digit_format', value=st.session_state.get('ui_siren_9_digit_format', ''))
@@ -231,7 +233,7 @@ elif page == 'Upload an invoice':
             st.caption(t('The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.'))
             identity = st.checkbox(t('Simulate verified SME identity'), key='ui_simulate_verified_sme_identity', value=st.session_state.get('ui_simulate_verified_sme_identity', False))
             documents = st.checkbox(t('Simulate complete documentation: invoice, purchase order and proof of delivery'), key='ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', value=st.session_state.get('ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', False))
-            submitted = st.form_submit_button(t('Submit invoice'), type='primary')
+            submitted = st.button(t('Submit invoice'), type='primary', key='ui_submit_invoice')
         if submitted:
             try:
                 if amount is None or issued is None or due is None:
