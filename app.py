@@ -13,7 +13,7 @@ from engine import seed, new_invoice, score, eligible, confirm, finance, quote, 
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
 from investor_ui import render_investor
-from opportunities import extra_examples
+from demo_catalog import catalog_examples
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
 t = Translator(language).text
@@ -23,9 +23,10 @@ try:
     initial = st.session_state.get('invoices')
     if initial is None:
         initial = seed()
-        initial += extra_examples(initial)
+        initial += catalog_examples(initial)
     migrate_session(initial)
     database.initialize(initial)
+    database.populate_demo_catalog(once=True)
     invoices = database.load()
     st.session_state.invoices = invoices
 except StorageError as exc:
@@ -221,7 +222,9 @@ with st.sidebar:
         reset = st.checkbox(t('Replace the shared demo data for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
         if st.button(t('Reload examples'), disabled=not reset, key='ui_reload_examples'):
             try:
-                database.reset(seed())
+                examples = seed()
+                examples += catalog_examples(examples)
+                database.reset(examples)
                 st.session_state.pop('focus_invoice', None)
                 st.session_state.pop('ui_filter_statuses', None)
                 st.rerun()
