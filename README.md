@@ -95,15 +95,23 @@ Back up the SQLite file while the application is stopped. Database files, upload
 
 ## Investor future value
 
-The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capital advanced to the SME, `r` is the annual continuous-interest rate entered as a percentage (5 means 5%), and `t` is years without payment. The 5% initial UI value is an editable example assumption. It is separate from the existing one-off invoice fee; future value is not added to the invoice, fee, insurance indemnity, claim, gross margin or collected income.
+The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capital advanced to the SME, `r` is the annual continuous-interest rate expressed as a percentage (5 means 5%), and `t` is years without payment. Default Financing now derives the advance and rate jointly from documented risk/cost assumptions. The independent manual mode and Simulator retain a 5% illustrative starting value. Future value is never added a second time to fees, insurance indemnity or collected income.
 
-- **Financing:** select an annual rate and preview future value at the invoice due date. Simulating funding saves the date and annual rate with the original advance.
+- **Financing:** use risk-based pricing by default, or explicitly select the independent manual demonstration. Simulating funding saves the date, rate and advance, plus the complete risk-pricing snapshot when applicable.
 - **Portfolio:** future value, theoretical interest and elapsed days are calculated automatically when the view is loaded or refreshed. Time starts on the financing date, including days before the invoice due date. Calendar days are divided by 365, including actual leap-year days (Actual/365 fixed). Today's date uses Europe/Paris. A projection-date toggle lets investors explore longer periods without payment.
 - **Payment:** a simulated full payment records the payment date. Calculations stop on that date, even when a later projection date is selected. Late payment, insolvency or dispute does not itself simulate cash collection; any continuing exponential growth is only a theoretical scenario.
 - **Existing records:** the app never invents missing financing/payment dates or retroactively changes saved amounts. The investor can explicitly configure missing dates and an annual assumption. A recorded financing date cannot be changed; the rate remains editable as a simulation assumption.
 - **Simulator:** enter the time directly in years (fractional values are supported). Calculations always use the original advance and total elapsed time, so repeated reruns cannot compound the same period twice. Interest settings and payment dates survive database reopening and are included in JSON exports.
 
 The mathematical convention is continuous compounding; see [OpenStax](https://openstax.org/books/college-algebra-corequisite-support/pages/6-1-exponential-functions). This model does not establish contractual interest, penalties, collectible debt or guaranteed payment.
+
+## Risk-sensitive pricing
+
+Open **Investor → Financing**. The default mode requires one-year buyer PD, nominal LGD before time discounting, costs and data provenance. It does not invent PD from `Strong`, `On time` or the existing score. Fields start empty; a clearly marked button loads fictional assumptions for demonstrations. User-provided sources are recorded but not independently verified.
+
+The model scales one-year PD to the actual tenor using constant survival intensity, prices the maximum advance from expected discounted performing/default cash flows, and derives the annual continuous equivalent. It accounts separately for expected collection delay, recovery lag, upfront costs and effective annual funding/capital/margin budgets. Missing/old data and the configured rate limit can block an offer. Existing workflow requirements remain binding.
+
+The screen exposes the cash-flow breakdown, mechanical stress sensitivities and a downloadable JSON calculation report. Funding rechecks the quote and persists its assumptions; saved risk-based rates cannot be overwritten through the legacy interest editor. The full model derivation, assumptions, example and empirical calibration requirements are in [PRICING_MODEL.md](PRICING_MODEL.md). Mathematical tests do not establish that assumed PD/LGD predict real losses.
 
 ## Tests
 
@@ -120,6 +128,8 @@ python -m unittest -v
 - `packages.txt`: OCR executable and language dependencies for Community Cloud.
 - `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
 - `future_value.py`: continuous compounding, Actual/365 duration and payment-date stopping.
+- `risk_pricing.py`, `pricing_ui.py`: documented expected-cash-flow pricing and investor controls.
+- `PRICING_MODEL.md`: derivation, conventions, limitations and calibration requirements.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
 - `engine.py`: business rules, calculations, sample data and session migration.
@@ -128,6 +138,7 @@ python -m unittest -v
 - `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
 - `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
 - `test_future_value.py`: percentage/year conversion, invalid inputs, no double compounding, legacy records and payment stopping. Storage and interface tests also cover saved interest settings and projections.
+- `test_risk_pricing.py`: horizon PD, cash-flow consistency, policy blocks, sensitivities, saved snapshots and prevention of double charging.
 - `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 

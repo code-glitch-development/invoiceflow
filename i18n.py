@@ -658,6 +658,111 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
 
 
 FR.update({
+    'Nominal LGD before time discount (%)': 'Perte nominale en cas de défaut, avant actualisation (%)',
+    'The recovery lag is discounted separately. Do not enter an already-discounted LGD unchanged.':
+        'Le délai de récupération est actualisé séparément. Ne saisissez pas telle quelle une perte en cas de défaut déjà actualisée.',
+    'Assumption notes / recovery basis': 'Justification des hypothèses / base des récupérations',
+    'Risk-based pricing': 'Tarification selon le risque',
+    'Manual assumptions': 'Hypothèses manuelles',
+    'Pricing method': 'Méthode de tarification',
+    'Manual demonstration: the fee and annual rate are independent assumptions, not a risk-based price.':
+        'Démonstration manuelle : la commission et le taux annuel sont des hypothèses indépendantes, sans tarification du risque.',
+    'Risk-based invoice pricing': 'Tarification de la facture selon le risque',
+    'Provide one-year buyer PD, net LGD and costs. The demo score and payment-history dropdown are not converted into default probabilities.':
+        'Renseignez la probabilité de défaut à un an du client, la perte nette en cas de défaut et les coûts. Le score de démonstration et l’historique déclaré ne sont pas convertis en probabilités de défaut.',
+    'Load explicitly fictional assumptions': 'Charger des hypothèses explicitement fictives',
+    'Risk-data origin': 'Origine des données de risque',
+    'User-provided, unverified': 'Fournies par l’utilisateur, non vérifiées',
+    'Illustrative assumptions': 'Hypothèses illustratives',
+    'Source / provider / reference': 'Source / fournisseur / référence',
+    'Risk-data observation date': 'Date d’observation des données de risque',
+    'One-year buyer probability of default (%)': 'Probabilité de défaut du client à un an (%)',
+    'LGD (% of advanced capital)': 'Perte en cas de défaut (% du capital avancé)',
+    'Annual funding cost (%)': 'Coût annuel du financement (%)',
+    'Annual capital charge (%)': 'Coût annuel du capital alloué (%)',
+    'Annual target margin (%)': 'Marge annuelle cible (%)',
+    'Upfront transaction costs (€)': 'Coûts initiaux de l’opération (€)',
+    'LGD must reflect justified net recoveries. A coverage slider or recourse toggle alone does not establish a recovery value.':
+        'La perte en cas de défaut doit refléter des récupérations nettes justifiées. Un curseur de couverture ou une option de recours ne prouve pas une récupération.',
+    'Funding, capital and margin inputs are annual effective-rate budgets. Their sum is converted to a continuous discount rate before pricing.':
+        'Les coûts de financement, de capital et la marge sont des budgets annuels exprimés en taux effectifs. Leur somme est convertie en taux continu pour l’actualisation.',
+    'Expected payment delay after due date (days)': 'Retard de paiement attendu après l’échéance (jours)',
+    'Additional recovery delay after collection date (days)': 'Délai supplémentaire de récupération après la date d’encaissement prévue (jours)',
+    'Investor policy limits': 'Limites définies par l’investisseur',
+    'Maximum annual continuous rate (%)': 'Taux annuel continu maximal (%)',
+    'Maximum risk-data age (days)': 'Ancienneté maximale des données de risque (jours)',
+    'Fictional inputs: this quote is a demonstration, not a calibrated credit assessment.':
+        'Données fictives : cette proposition est une démonstration, pas une évaluation de crédit calibrée.',
+    'User-provided data are recorded with their source; the application has not independently verified them.':
+        'Les données fournies sont enregistrées avec leur source ; l’application ne les a pas vérifiées de manière indépendante.',
+    'Complete risk inputs and their source, or explicitly load the fictional example.':
+        'Complétez les données de risque et leur source, ou chargez explicitement l’exemple fictif.',
+    'Model maximum advance': 'Avance maximale selon le modèle',
+    'Calculated annual continuous rate (%)': 'Taux annuel continu calculé (%)',
+    'Default probability over funding horizon (%)': 'Probabilité de défaut sur la durée du financement (%)',
+    'Not available': 'Indisponible',
+    'Expected collection: {date} · Funding horizon: {days} days.':
+        'Encaissement prévu : {date} · Durée du financement : {days} jours.',
+    'The advance is solved from expected discounted cash flows. The annual rate then connects that advance to full invoice repayment at the expected collection date.':
+        'L’avance est calculée à partir des flux espérés actualisés. Le taux annuel relie ensuite cette avance au remboursement intégral de la facture à la date prévue.',
+    'Component': 'Composante',
+    'Expected performing-payment PV': 'Valeur actualisée du paiement espéré hors défaut',
+    'Expected recovery PV': 'Valeur actualisée des récupérations espérées',
+    'Capital advanced': 'Capital avancé',
+    'Expected NPV after target return': 'VAN espérée après rendement cible',
+    'Expected principal credit loss, undiscounted': 'Perte espérée sur le capital, non actualisée',
+    'Sensitivity to less favourable assumptions': 'Sensibilité à des hypothèses moins favorables',
+    'Expected NPV at original proposed advance': 'VAN espérée avec l’avance initialement proposée',
+    'Within policy': 'Dans les limites fixées',
+    'Yes': 'Oui',
+    'No': 'Non',
+    'Base assumptions': 'Hypothèses de départ',
+    'Annual PD doubled': 'Probabilité annuelle de défaut doublée',
+    'LGD +10 percentage points': 'Perte en cas de défaut majorée de 10 points',
+    'Payment delayed by 30 more days': 'Paiement retardé de 30 jours supplémentaires',
+    'Mechanical sensitivities, not calibrated stress forecasts. Correlation and portfolio concentration are not modelled.':
+        'Ces sensibilités sont mécaniques, sans prévisions de stress calibrées. Les corrélations et la concentration du portefeuille ne sont pas modélisées.',
+    'Model assumptions and audit report': 'Hypothèses du modèle et rapport de calcul',
+    'Constant default intensity; one collection date; default recoveries paid after that date plus the stated lag. Costs and capital/margin charges are explicit assumptions, not regulatory capital calculations.':
+        'Intensité de défaut constante ; date d’encaissement unique ; récupérations après cette date et le délai indiqué. Les coûts et budgets de capital/marge sont des hypothèses explicites, sans calcul de fonds propres réglementaires.',
+    'PD is a real-world input for expected cash flows. The calculated rate is a cost-and-risk pricing proposal, not a market fair-value quote or a guaranteed return.':
+        'La probabilité de défaut fournie sert aux flux espérés. Le taux est une proposition fondée sur les coûts et le risque, sans estimation d’une juste valeur de marché ni rendement garanti.',
+    'Download pricing assumptions and calculation (JSON)': 'Télécharger les hypothèses et le calcul (JSON)',
+    'Rate locked to the original risk-pricing report. No repricing is applied to an existing transaction.':
+        'Le taux reste lié au rapport de tarification initial. Une opération existante n’est pas retarifée.',
+    'Saved risk-pricing assumptions': 'Hypothèses de tarification enregistrées',
+    'Full payment simulated. Gross discount before costs: {p0}.':
+        'Paiement intégral simulé. Décote brute avant coûts : {p0}.',
+    'Complete every numerical pricing input with a finite value.':
+        'Renseignez chaque donnée chiffrée avec une valeur finie.',
+    'Annual PD must be at least 0 and below 100%; duration cannot be negative.':
+        'La probabilité annuelle doit être positive ou nulle et inférieure à 100 % ; la durée ne peut pas être négative.',
+    'Annual PD must be below 100%, and LGD must be between 0 and 100%.':
+        'La probabilité annuelle doit être inférieure à 100 %, et la perte en cas de défaut comprise entre 0 et 100 %.',
+    'Annual cost rates and the investor rate limit must be between 0 and 100%.':
+        'Les taux annuels de coûts et la limite de taux doivent être compris entre 0 et 100 %.',
+    'Upfront transaction costs cannot be negative.': 'Les coûts initiaux ne peuvent pas être négatifs.',
+    'Delay and data-age limits must be whole days between 0 and 36500.':
+        'Les délais et limites d’ancienneté doivent être des nombres entiers de jours entre 0 et 36500.',
+    'Identify the risk-data origin and source before pricing.':
+        'Identifiez l’origine et la source des données de risque avant le calcul.',
+    'Enter a valid risk-data observation date.': 'Renseignez une date d’observation valide.',
+    'Risk-data observation date cannot be in the future.':
+        'La date d’observation des données de risque ne peut pas être future.',
+    'Risk pricing requires a positive invoice amount and a future due date.':
+        'Le calcul nécessite un montant de facture positif et une échéance future.',
+    'Risk data exceed the configured maximum age.':
+        'Les données de risque dépassent l’ancienneté maximale définie.',
+    'Expected discounted receipts do not cover transaction costs.':
+        'Les encaissements espérés actualisés ne couvrent pas les coûts de l’opération.',
+    'The model cannot produce an advance between EUR 1 and the invoice amount.':
+        'Le modèle ne permet pas une avance comprise entre 1 € et le montant de la facture.',
+    'Calculated annual rate exceeds the investor policy limit.':
+        'Le taux annuel calculé dépasse la limite définie par l’investisseur.',
+    'The risk-pricing quote is blocked by the configured policy.':
+        'La proposition de tarification est bloquée par les limites définies.',
+    'A risk-priced transaction keeps its original rate and pricing assumptions.':
+        'Une opération tarifée selon le risque conserve son taux et ses hypothèses initiaux.',
     'Investor future value': 'Valeur future pour l’investisseur',
     'Annual interest rate (%)': 'Taux d’intérêt annuel (%)',
     'Time without payment (years)': 'Durée sans paiement (années)',

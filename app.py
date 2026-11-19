@@ -9,8 +9,9 @@ from storage import InvoiceStore, StorageError
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
-from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest
+from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
+from pricing_ui import pricing_controls
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
 t = Translator(language).text
@@ -150,28 +151,34 @@ def future_value_panel(invoice):
                (invoice.get('outcome') == 'Paid' and not funding.get('paid_on')))
     if missing:
         st.info(t('This older financing has no complete interest settings. Record its dates and annual rate to enable the calculation.'))
-    with st.expander(t('Interest simulation settings'), expanded=missing):
-        with st.form('interest_settings_' + invoice['id']):
-            start = st.date_input(t('Financing date'),
-                                  value=date.fromisoformat(funding['financed_on']) if funding.get('financed_on') else valuation_today(),
-                                  min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
-                                  disabled=bool(funding.get('financed_on')), key='interest_start_' + invoice['id'])
-            annual = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
-                                     value=float(funding.get('annual_interest_rate', 5.0)), step=0.1,
-                                     key='interest_rate_' + invoice['id'])
-            payment = None
-            if invoice.get('outcome') == 'Paid' and not funding.get('paid_on'):
-                payment = st.date_input(t('Payment date'), value=valuation_today(),
-                                        min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
-                                        key='interest_paid_' + invoice['id'])
-            save = st.form_submit_button(t('Save interest assumptions'))
-        if save:
-            try:
-                persist_update(invoice, configure_interest, annual, start, payment)
-                st.session_state.notice = t('Interest assumptions saved.')
-                st.rerun()
-            except ValueError as exc:
-                st.error(t(str(exc)))
+    if funding.get('pricing'):
+        saved = funding['pricing']
+        st.caption(t('Rate locked to the original risk-pricing report. No repricing is applied to an existing transaction.'))
+        with st.expander(t('Saved risk-pricing assumptions')):
+            st.json(saved)
+    else:
+        with st.expander(t('Interest simulation settings'), expanded=missing):
+            with st.form('interest_settings_' + invoice['id']):
+                start = st.date_input(t('Financing date'),
+                                      value=date.fromisoformat(funding['financed_on']) if funding.get('financed_on') else valuation_today(),
+                                      min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
+                                      disabled=bool(funding.get('financed_on')), key='interest_start_' + invoice['id'])
+                annual = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
+                                         value=float(funding.get('annual_interest_rate', 5.0)), step=0.1,
+                                         key='interest_rate_' + invoice['id'])
+                payment = None
+                if invoice.get('outcome') == 'Paid' and not funding.get('paid_on'):
+                    payment = st.date_input(t('Payment date'), value=valuation_today(),
+                                            min_value=date.fromisoformat(invoice['issued']), max_value=valuation_today(),
+                                            key='interest_paid_' + invoice['id'])
+                save = st.form_submit_button(t('Save interest assumptions'))
+            if save:
+                try:
+                    persist_update(invoice, configure_interest, annual, start, payment)
+                    st.session_state.notice = t('Interest assumptions saved.')
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(t(str(exc)))
     if missing:
         return
     as_of = valuation_today()
@@ -370,26 +377,38 @@ elif page == 'Financing':
             i = next((i for i in items if i['id'] == selected))
             detail(i)
             st.caption(t('Demo requirements: buyer confirmation, identity and documents declared verified, a future due date and a score ≥ 65/100.'))
-            rate = st.slider(t('Fee on face value (%)'), 0.0, 10.0, st.session_state.get('ui_fee_on_face_value', 4.0), 0.1, key='ui_fee_on_face_value')
-            annual_interest = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
-                                              value=st.session_state.get('ui_financing_interest', 5.0), step=0.1,
-                                              key='ui_financing_interest')
+            method = st.radio(t('Pricing method'), ['Risk-based pricing', 'Manual assumptions'],
+                              format_func=t, key='ui_pricing_method')
+            report = None
             recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
             coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
-            q = quote(i['amount'], rate)
-            a, b = st.columns(2)
-            a.metric(t('Simulated advance to the SME'), euro(q['advance']))
-            b.metric(t('Gross margin if paid in full'), euro(q['fee']))
-            days_to_due = max(0, (date.fromisoformat(i['due']) - valuation_today()).days)
-            st.metric(t('Future value at due date (simulation)'),
-                      euro(round_value(continuous_future_value(q['advance'], days_to_due / 365, annual_interest))))
-            st.caption(t('Continuous interest uses the capital advanced and a separate annual percentage rate. The fee remains a one-off percentage of the invoice.'))
+            if method == 'Risk-based pricing':
+                report = pricing_controls(i, t, euro)
+                ready = bool(report and report['acceptable'])
+            else:
+                st.info(t('Manual demonstration: the fee and annual rate are independent assumptions, not a risk-based price.'))
+                rate = st.slider(t('Fee on face value (%)'), 0.0, 10.0, st.session_state.get('ui_fee_on_face_value', 4.0), 0.1, key='ui_fee_on_face_value')
+                annual_interest = st.number_input(t('Annual interest rate (%)'), min_value=0.0, max_value=100.0,
+                                                  value=st.session_state.get('ui_financing_interest', 5.0), step=0.1,
+                                                  key='ui_financing_interest')
+                q = quote(i['amount'], rate)
+                a, b = st.columns(2)
+                a.metric(t('Simulated advance to the SME'), euro(q['advance']))
+                b.metric(t('Gross margin if paid in full'), euro(q['fee']))
+                days_to_due = max(0, (date.fromisoformat(i['due']) - valuation_today()).days)
+                st.metric(t('Future value at due date (simulation)'),
+                          euro(round_value(continuous_future_value(q['advance'], days_to_due / 365, annual_interest))))
+                st.caption(t('Continuous interest uses the capital advanced and a separate annual percentage rate. The fee remains a one-off percentage of the invoice.'))
+                ready = True
             st.caption(t('Before capital costs, insurance, losses and operating expenses. Coverage is hypothetical; no insurer is connected.'))
             if not eligible(i):
                 st.warning(t('Resolve the requirements listed above before financing.'))
-            if st.button(t('Simulate financing'), type='primary', disabled=not eligible(i), key='ui_simulate_financing'):
+            if st.button(t('Simulate financing'), type='primary', disabled=not eligible(i) or not ready, key='ui_simulate_financing'):
                 try:
-                    persist_update(i, finance, rate, recourse, coverage, annual_interest)
+                    if method == 'Risk-based pricing':
+                        persist_update(i, finance_with_risk_pricing, report['assumptions'], recourse, coverage)
+                    else:
+                        persist_update(i, finance, rate, recourse, coverage, annual_interest)
                     st.session_state.notice = t('Simulated financing saved to the portfolio.')
                     st.rerun()
                 except ValueError as exc:
@@ -448,7 +467,7 @@ elif page == 'Portfolio':
         detail(i)
         f = i['financing']
         if f:
-            st.write(t('Advance: **{p0}** · Fee: **{p1} %** · Hypothetical coverage: **{p2} %** · {p3}', p0=euro(f['advance']), p1=f['rate'], p2=f['coverage'], p3=t('With recourse' if f['recourse'] else 'Without recourse')))
+            st.write(t('Advance: **{p0}** · Fee: **{p1} %** · Hypothetical coverage: **{p2} %** · {p3}', p0=euro(f['advance']), p1=f"{f['rate']:.4f}", p2=f['coverage'], p3=t('With recourse' if f['recourse'] else 'Without recourse')))
             if profile == 'Investor':
                 future_value_panel(i)
             if i['outcome'] == 'Insolvency':
@@ -459,7 +478,7 @@ elif page == 'Portfolio':
             elif i['outcome'] == 'Late payment':
                 st.info(t('Payment pending. No collected revenue or automatic indemnity assumed.'))
             elif i['outcome'] == 'Paid':
-                st.success(t('Full payment simulated. Hypothetical gross margin: {p0}.', p0=euro(f['fee'])))
+                st.success(t('Full payment simulated. Gross discount before costs: {p0}.' if f.get('pricing') else 'Full payment simulated. Hypothetical gross margin: {p0}.', p0=euro(f['fee'])))
             if profile == 'Investor' and i['status'] == 'Financed':
                 with st.form('settle'):
                     outcome = st.selectbox(t('Event to simulate'), ['Paid', 'Late payment', 'Insolvency', 'Dispute'], key='ui_event_to_simulate', format_func=t, index=selected_index('ui_event_to_simulate', ['Paid', 'Late payment', 'Insolvency', 'Dispute']))

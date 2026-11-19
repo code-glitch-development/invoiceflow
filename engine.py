@@ -7,6 +7,8 @@ import re
 import unicodedata
 from uuid import uuid4
 from future_value import continuous_future_value, valuation_today
+from risk_pricing import price_invoice
+from copy import deepcopy
 
 
 def money(value):
@@ -131,6 +133,8 @@ def configure_interest(i, annual_interest_rate, financed_on, paid_on=None):
     funding = i.get('financing')
     if not funding:
         raise ValueError('Only a financed invoice has interest simulation settings.')
+    if funding.get('pricing'):
+        raise ValueError('A risk-priced transaction keeps its original rate and pricing assumptions.')
     continuous_future_value(1, 0, annual_interest_rate)
     if not isinstance(financed_on, date) or not date.fromisoformat(i['issued']) <= financed_on <= valuation_today():
         raise ValueError('The financing date must be between the issue date and today.')
@@ -143,6 +147,19 @@ def configure_interest(i, annual_interest_rate, financed_on, paid_on=None):
             raise ValueError('Enter a payment date between the financing date and today.')
         candidate['paid_on'] = payment.isoformat()
     i['financing'] = candidate
+
+
+def finance_with_risk_pricing(i, assumptions, recourse, coverage):
+    """Reprice from current invoice data on save; never trust a client-side quote."""
+    report = price_invoice(i, assumptions)
+    if not report['acceptable']:
+        raise ValueError('The risk-pricing quote is blocked by the configured policy.')
+    candidate = deepcopy(i)
+    finance(candidate, report['discount_percent'], recourse, coverage,
+            report['annual_rate_percent'], date.fromisoformat(report['priced_on']))
+    candidate['financing'].update(advance=report['advance'], fee=report['gross_discount'],
+                                  pricing=deepcopy(report))
+    i.update(candidate)
 
 
 def loss_scenario(amount, rate, coverage, recourse=False):

@@ -113,6 +113,7 @@ class InterfaceTests(unittest.TestCase):
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
         at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.radio(key='ui_pricing_method').set_value('Manual assumptions').run()
         button = next(b for b in at.button if b.label == 'Simulate financing')
         self.assertFalse(button.disabled)
         button.click().run()
@@ -150,12 +151,72 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(at.number_input(key='ui_simulation_years').value, .5)
         self.assertEqual(metric('Valeur future (simulation)'), f'{expected:,.2f}'.replace(',', ' ').replace('.', ',') + ' €')
 
+    def test_risk_pricing_needs_inputs_and_saves_a_locked_report(self):
+        from datetime import date
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        self.assertEqual(at.radio(key='ui_pricing_method').value, 'Risk-based pricing')
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        invoice = at.session_state['invoices'][0]
+        prefix = 'pricing_' + invoice['id'] + '_'
+        at.button(key=prefix+'example').click().run()
+        self.assertFalse(at.exception)
+        self.assertFalse(at.button(key='ui_simulate_financing').disabled)
+        initial_rate = float(next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)'))
+        at.number_input(key=prefix+'annual_pd_percent').set_value(4.0).run()
+        new_rate = float(next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)'))
+        self.assertGreater(new_rate, initial_rate)
+        at.button(key='ui_simulate_financing').click().run()
+        self.assertFalse(at.exception)
+        saved = at.session_state['invoices'][0]['financing']
+        self.assertEqual(saved['pricing']['assumptions']['annual_pd_percent'], 4)
+        self.assertEqual(saved['pricing']['assumptions']['data_origin'], 'Illustrative assumptions')
+        at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+        self.assertFalse(any(w.key == 'interest_rate_'+invoice['id'] for w in at.number_input))
+        at.toggle(key='future_projection_'+invoice['id']).set_value(True).run()
+        at.date_input(key='future_date_'+invoice['id']).set_value(date.fromisoformat(saved['pricing']['expected_payment_on'])).run()
+        self.assertFalse(at.exception)
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Future value (simulation)'), f"€{invoice['amount']:,.2f}")
+
+    def test_risk_pricing_stale_data_and_rate_limit_disable_funding(self):
+        from datetime import timedelta
+        from future_value import valuation_today
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        identity = at.session_state['invoices'][0]['id']
+        prefix = 'pricing_' + identity + '_'
+        at.button(key=prefix+'example').click().run()
+        at.date_input(key=prefix+'source_date').set_value(valuation_today()-timedelta(days=400)).run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        self.assertTrue(any('maximum age' in e.value for e in at.error))
+        at.date_input(key=prefix+'source_date').set_value(valuation_today()).run()
+        at.number_input(key=prefix+'max_rate_percent').set_value(1.0).run()
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        self.assertTrue(any('policy limit' in e.value for e in at.error))
+
+    def test_risk_inputs_and_quote_survive_language_switch(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        prefix = 'pricing_' + at.session_state['invoices'][0]['id'] + '_'
+        at.button(key=prefix+'example').click().run()
+        rate = next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)')
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.number_input(key=prefix+'annual_pd_percent').value, 2)
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Taux annuel continu calculé (%)'), rate)
+        self.assertFalse(at.button(key='ui_simulate_financing').disabled)
+
     def test_portfolio_future_value_is_saved_projected_and_stopped_at_payment(self):
         from datetime import timedelta
         from future_value import continuous_future_value, round_value, valuation_today
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
         at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.radio(key='ui_pricing_method').set_value('Manual assumptions').run()
         at.number_input(key='ui_financing_interest').set_value(7.0).run()
         at.button(key='ui_simulate_financing').click().run()
         invoice = at.session_state['invoices'][0]
