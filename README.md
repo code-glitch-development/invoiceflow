@@ -35,7 +35,15 @@ Les factures et leurs financements sont conservés. Validez un formulaire ouvert
 
 ## Three-minute demo
 
-1. Open **Overview** to explore the four fictional examples.
+The demo role selector opens a distinct workspace and returns to its overview:
+
+- **SME:** upload, invoice checks and tracking; submitted volume, incomplete files and simulated advances.
+- **Buyer:** confirmation and tracking; pending decisions, their total amount and disputes.
+- **Investor:** financing, simulator and portfolio; eligible invoices, their volume and outstanding advances.
+
+Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
+
+1. Open the **SME → Overview** to explore the four fictional examples.
 2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**, and tick both simulated checks.
 3. Select **Buyer → Buyer confirmation**. Choose the buyer and invoice, check the confirmation box and save. You can also dispute an invoice with a reason.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
@@ -91,10 +99,13 @@ python -m unittest -v
 ## Files
 
 - `app.py`: Streamlit interface and workflows.
+- `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
 - `engine.py`: business rules, calculations, sample data and session migration.
 - `requirements.txt`: dependencies.
 - `.streamlit/config.toml`: theme and upload limit.
 - `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
+- `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
 - `VERIFICATION.md`: validation performed and limitations.
+

@@ -7,11 +7,12 @@ import pandas as pd
 import streamlit as st
 from storage import InvoiceStore, StorageError
 from i18n import Translator, localize_frame
+from workspaces import WORKSPACES, overview
 from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
 t = Translator(language).text
-st.markdown('<style>\n.block-container {padding-top:2rem; max-width:1400px}\n[data-testid="stSidebar"] {background:#13253c}\n[data-testid="stSidebar"] * {color:#f2f6fb}\n[data-testid="stSidebar"] [data-baseweb="select"] * {color:#142239}\n[data-testid="stMetric"] {background:white; border:1px solid #e1e8ef; padding:20px; border-radius:16px}\n.hero {background:linear-gradient(120deg,#13253c,#164b53);color:white;padding:32px;border-radius:22px;margin-bottom:24px}\n.hero h1 {color:white;font-size:2.6rem;margin:0}.hero p {color:#d3e7e6;margin-bottom:0}\n.eyebrow {font-size:.8rem;letter-spacing:.16em;color:#87e3c7;margin-bottom:10px}\n</style>', unsafe_allow_html=True)
+st.markdown('<style>\n.block-container {padding-top:2rem; max-width:1400px}\n[data-testid="stSidebar"] {background:#13253c}\n[data-testid="stSidebar"] {color:#f2f6fb}\n[data-testid="stSidebar"] [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {color:#f2f6fb}\n[data-testid="stSidebar"] [data-baseweb="select"] {background:#f5f7fb; border-radius:8px}\n[data-testid="stSidebar"] [data-baseweb="select"] * {color:#142239 !important; -webkit-text-fill-color:#142239 !important}\n[role="listbox"] {background:#f5f7fb; color:#142239}\n[role="option"] {color:#142239}\n[data-testid="stMetric"] {background:white; border:1px solid #e1e8ef; padding:20px; border-radius:16px}\n.hero {background:linear-gradient(120deg,#13253c,#164b53);color:white;padding:32px;border-radius:22px;margin-bottom:24px}\n.hero h1 {color:white;font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.2;margin:0;overflow-wrap:break-word}.hero p {color:#d3e7e6;margin-bottom:0}\n.eyebrow {font-size:.8rem;letter-spacing:.16em;color:#87e3c7;margin-bottom:10px}\n</style>', unsafe_allow_html=True)
 database = InvoiceStore(os.environ.get('INVOICEFLOW_DB_PATH', str(Path(__file__).parent / 'data' / 'invoiceflow.db')))
 try:
     initial = st.session_state.get('invoices')
@@ -44,6 +45,12 @@ def navigate(role, target_page, invoice=None):
         elif target_page == 'Portfolio':
             route['portfolio_pick'] = invoice['id']
     st.session_state.route_request = route
+
+
+def change_workspace():
+    # Reset before navigation widgets are instantiated; explicit guided routes
+    # still choose their destination through route_request above.
+    st.session_state.ui_navigation = 'Overview'
 
 
 def persist_update(invoice, operation, *args):
@@ -135,8 +142,10 @@ def detail(i):
 with st.sidebar:
     st.title(t('InvoiceFlow ↗'))
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
-    profile = st.selectbox(t('Demo role'), ['SME', 'Buyer', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Buyer', 'Investor']))
-    page = st.radio(t('Navigation'), ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer confirmation', 'Financing', 'Simulator', 'Portfolio'], key='ui_navigation', format_func=t, index=selected_index('ui_navigation', ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer confirmation', 'Financing', 'Simulator', 'Portfolio']))
+    profile = st.selectbox(t('Demo role'), ['SME', 'Buyer', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Buyer', 'Investor']), on_change=change_workspace)
+    workspace = WORKSPACES[profile]
+    pages = workspace['pages']
+    page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=t, index=selected_index('ui_navigation', pages))
     st.divider()
     st.caption(t('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.'))
     with st.expander(t('Reset demo')):
@@ -149,32 +158,32 @@ with st.sidebar:
                 st.rerun()
             except StorageError as exc:
                 st.error(t(str(exc)))
-st.markdown(t('<div class="hero"><div class="eyebrow">INVOICEFLOW / INTERACTIVE DEMO</div><h1>Your invoices. Your cash flow.</h1><p>Upload, confirm and simulate financing.</p></div>'), unsafe_allow_html=True)
+st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
+            '</div><h1>' + t(workspace['headline']) + '</h1><p>' +
+            t(workspace['description']) + '</p></div>', unsafe_allow_html=True)
 st.caption(t('{profile} workspace · Roles are interchangeable for the demo. Saved invoices are shared across visitors on this server; there is no authentication.', profile=t(profile)))
 st.caption(t('Changes are saved automatically. Closing your browser does not delete saved invoices.'))
 if 'notice' in st.session_state:
     st.success(st.session_state.pop('notice'))
 if page == 'Overview':
-    a, b, c, d = st.columns(4)
-    a.metric(t('Submitted volume'), euro(sum((i['amount'] for i in invoices))))
-    b.metric(t('Invoices awaiting confirmation'), sum((i['buyer_status'] == 'Pending' for i in invoices)))
-    c.metric(t('Eligible for financing simulation'), sum((eligible(i) for i in invoices)))
-    d.metric(t('Simulated advances'), euro(sum((i['financing']['advance'] for i in invoices if i['financing']))))
-    st.subheader(t('From upload to early payment'))
-    cols = st.columns(3)
-    for col, title, body in zip(cols, ['01 · The SME uploads', '02 · The buyer confirms', '03 · The investor decides'], ['Details, documents and duplicate checks.', 'Confirm or dispute the service.', 'Score, fee and coverage scenario.']):
-        with col:
-            st.markdown(f'**{t(title)}**')
-            st.write(t(body))
-    st.subheader(t('Recent activity'))
-    st.dataframe(table(invoices), use_container_width=True, hide_index=True)
-    st.info(t('Suggested journey: SME → upload; Buyer → confirmation; Investor → financing; Portfolio → payment tracking.'))
-    if invoices:
+    metrics, actionable = overview(profile, invoices)
+    for column, (label, value, monetary) in zip(st.columns(3), metrics):
+        column.metric(t(label), euro(value) if monetary else value)
+    st.subheader(t(workspace['title']))
+    st.button(t(workspace['action']), key='workspace_primary_action', on_click=navigate,
+              args=(profile, workspace['target']), type='primary')
+    for column, step in zip(st.columns(3), workspace['steps']):
+        column.markdown('**' + t(step) + '**')
+    st.subheader(t(workspace['section']))
+    if actionable:
+        st.dataframe(table(actionable), use_container_width=True, hide_index=True)
         st.subheader(t('Continue an invoice'))
-        selected = pick(invoices, 'overview_pick')
-        current = next(i for i in invoices if i['id'] == selected)
+        selected = pick(actionable, 'overview_pick')
+        current = next(i for i in actionable if i['id'] == selected)
         workflow(current)
         show_requirements(current)
+    else:
+        st.info(t('No invoices in this workspace queue.'))
 elif page == 'Upload an invoice':
     st.subheader(t('Unlock your cash flow'))
     focused = next((i for i in invoices if i['id'] == st.session_state.get('focus_invoice')), None)
@@ -354,3 +363,4 @@ elif page == 'Portfolio':
                             st.error(t(str(exc)))
 st.divider()
 st.caption(t('InvoiceFlow · Academic demo based on your concept. Confirmation, scoring, insurance and financing are simulated; no banking service, external register or blockchain is connected.'))
+
