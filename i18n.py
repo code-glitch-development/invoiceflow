@@ -658,6 +658,42 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
 
 
 FR.update({
+    'Optional: upload the invoice first to prefill its details. Changing the file replaces the detected fields.':
+        'Facultatif : déposez d’abord la facture pour préremplir ses informations. Changer de fichier remplace les champs détectés.',
+    'Reading the invoice…': 'Lecture de la facture…',
+    '{count} fields prefilled. Review and correct them before submitting.':
+        '{count} champs préremplis. Vérifiez et corrigez les informations avant l’envoi.',
+    'No reliable fields detected. You can complete the form manually.':
+        'Aucune information fiable détectée. Vous pouvez remplir le formulaire manuellement.',
+    'Complete manually: {fields}': 'À compléter manuellement : {fields}',
+    'Text recognition was used. Check names, dates and amounts carefully.':
+        'Une reconnaissance de texte a été utilisée. Vérifiez attentivement les noms, dates et montants.',
+    'The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.':
+        'Les informations détectées restent modifiables. L’identité, les justificatifs et le risque client sont à vérifier séparément. Utilisez des documents fictifs.',
+    'Enter the invoice amount, issue date and due date before submitting.':
+        'Renseignez le montant, la date d’émission et la date d’échéance avant l’envoi.',
+    'Conflicting values were detected. Complete the affected fields manually.':
+        'Des valeurs contradictoires ont été détectées. Complétez les champs concernés manuellement.',
+    'A currency other than EUR was detected. Check the amount and currency manually.':
+        'Une devise autre que l’euro a été détectée. Vérifiez manuellement le montant et la devise.',
+    'Image recognition is unavailable on this server. Fill in the fields manually.':
+        'La reconnaissance des images est indisponible sur ce serveur. Remplissez les champs manuellement.',
+    'Image recognition failed or timed out. Fill in the fields manually.':
+        'La reconnaissance de l’image a échoué ou a pris trop de temps. Remplissez les champs manuellement.',
+    'Use a non-empty PDF, PNG or JPEG file up to 10 MB.':
+        'Utilisez un fichier PDF, PNG ou JPEG non vide de 10 Mo maximum.',
+    'This PDF is password-protected. Use an unlocked copy or fill in the fields manually.':
+        'Ce PDF est protégé par un mot de passe. Utilisez une copie déverrouillée ou remplissez les champs manuellement.',
+    'Only the first three pages were analysed. Check the remaining pages manually.':
+        'Seules les trois premières pages ont été analysées. Vérifiez les pages restantes manuellement.',
+    'Use a PNG or JPEG image with at most 16 million pixels.':
+        'Utilisez une image PNG ou JPEG de 16 millions de pixels maximum.',
+    'The document could not be read. Fill in the fields manually or try another file.':
+        'Le document n’a pas pu être lu. Remplissez les champs manuellement ou essayez un autre fichier.',
+    'The detected issue date is in the future. Check it manually.':
+        'La date d’émission détectée est dans le futur. Vérifiez-la manuellement.',
+    'The detected due date has passed or is today. Check it manually.':
+        'La date d’échéance détectée est passée ou correspond à aujourd’hui. Vérifiez-la manuellement.',
     'SME workspace': 'Espace PME',
     'Buyer workspace': 'Espace client final',
     'Investor workspace': 'Espace investisseur',

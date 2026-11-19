@@ -61,7 +61,10 @@ Use the sidebar to reset the shared demo. Resetting replaces the data for every 
 - Roles are freely interchangeable for presentation purposes: there is no authentication or access control.
 - Invoice records are automatically stored in SQLite, shared across all visitors on one server. Closing a browser or opening another session does not delete them while the database file remains available. There is no authentication: use fictional data only. JSON export is provided; importing backups is not implemented.
 - Existing sessions from the French version have their predefined statuses and risk categories migrated automatically. User-entered names, references and comments are preserved.
-- Optional PDF / PNG / JPEG upload, maximum 10 MB. Only the fingerprint is retained; no OCR, automatic extraction or document archive.
+- Optional PDF / PNG / JPEG upload, maximum 10 MB. Uploading before filling the SME form proposes labelled supplier/buyer names, supplier SIREN (or the first nine digits of a labelled SIRET), invoice reference, total including tax, issue date and due date. Values remain editable and the user must review them before submitting. Extraction never marks identity, documents, buyer confirmation or risk declarations as verified.
+- Text PDFs are read directly. Image-only pages and PNG/JPEG invoices use local Tesseract recognition in French/English. No external extraction API is called and files are not archived. Only the original file fingerprint and the submitted business fields are retained. Parsed fields live in the current browser session until submitted.
+- This is best-effort extraction of labelled values, not a general document-understanding service. Unlabelled/ambiguous fields remain empty, conflicting values require manual entry, and totals in a detected non-EUR currency are not filled automatically. Amounts prefer total including tax over a remaining balance after a deposit. Numeric dates use DD/MM/YYYY or YYYY-MM-DD; other formats may need manual entry. Only the first three PDF pages are analysed; images are limited to 16 million pixels and each OCR operation to 15 seconds. Scans, unusual layouts and recognition errors may require corrections.
+- Changing the file replaces previously populated invoice fields and clears verification checkboxes. A file that cannot be read leaves manual entry available. Re-running the same uploaded file (for example after a language switch) does not overwrite the user's corrections. Removing the file preserves the current draft.
 - Duplicate detection covers the saved workspace: SIREN plus normalized reference, or an identical SHA-256 file fingerprint. It cannot detect assignments on other platforms or every modified version of an invoice.
 - SIREN validation checks the 9-digit format only, without checking company existence. Identity, documentation and financial information are simulated declarations.
 - Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
@@ -75,6 +78,8 @@ Use the sidebar to reset the shared demo. Resetting replaces the data for every 
 ## Deploy to Streamlit Community Cloud
 
 Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. All visitors share the same saved demo dataset.
+
+`packages.txt` installs Tesseract and French/English language data on Community Cloud. For local OCR on Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-fra` and `tesseract-ocr-eng` with the system package manager; on macOS use `brew install tesseract tesseract-lang`. On Windows install Tesseract with the required languages and add its executable to PATH. Without the OCR executable, selectable-text PDFs still work and image uploads can be entered manually.
 
 **Persistence limit:** Streamlit Community Cloud does not guarantee persistence of local files. A restart, redeployment or host cleanup may remove the SQLite file. This implementation therefore preserves data across browser sessions while the file exists, but does not promise durable storage on Community Cloud. For durable hosting, run the app with a persistent disk and set `INVOICEFLOW_DB_PATH` to a path on that disk, or add an external database backend before relying on long-term Cloud storage. See the [official persistence note](https://docs.streamlit.io/develop/concepts/connections/connecting-to-data).
 
@@ -99,6 +104,8 @@ python -m unittest -v
 ## Files
 
 - `app.py`: Streamlit interface and workflows.
+- `invoice_extraction.py`: local PDF text extraction, OCR, labelled-field parsing and session prefill.
+- `packages.txt`: OCR executable and language dependencies for Community Cloud.
 - `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
@@ -107,5 +114,6 @@ python -m unittest -v
 - `.streamlit/config.toml`: theme and upload limit.
 - `test_engine.py`, `test_i18n.py`, `test_storage.py`, `test_ui.py`: automated tests.
 - `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
+- `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 

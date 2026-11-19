@@ -8,6 +8,7 @@ import streamlit as st
 from storage import InvoiceStore, StorageError
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
+from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
 from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
@@ -192,6 +193,30 @@ elif page == 'Upload an invoice':
     if profile != 'SME':
         st.info(t('Select the SME role to upload an invoice.'))
     else:
+        upload = st.file_uploader(t('Original invoice · PDF, PNG or JPEG · 10 MB max.'),
+                                  type=['pdf', 'png', 'jpg', 'jpeg'],
+                                  key='ui_original_invoice_pdf_png_or_jpeg_10_mb_max')
+        st.caption(t('Optional: upload the invoice first to prefill its details. Changing the file replaces the detected fields.'))
+        if upload is not None:
+            with st.spinner(t('Reading the invoice…')):
+                apply_uploaded_invoice(st.session_state, upload.getvalue(), upload.name)
+            extraction = st.session_state.invoice_prefill
+            if extraction['applied']:
+                st.success(t('{count} fields prefilled. Review and correct them before submitting.',
+                             count=len(extraction['applied'])))
+            else:
+                st.info(t('No reliable fields detected. You can complete the form manually.'))
+            missing = [t(label) for name, label in FIELD_LABELS.items() if name not in extraction['applied']]
+            if missing:
+                st.caption(t('Complete manually: {fields}', fields=', '.join(missing)))
+            if extraction['used_ocr']:
+                st.caption(t('Text recognition was used. Check names, dates and amounts carefully.'))
+            for warning in extraction['warnings']:
+                st.warning(t(warning))
+        else:
+            # Removing a file keeps the user's draft but permits a fresh extraction on re-upload.
+            st.session_state.pop('invoice_prefill_digest', None)
+            st.session_state.pop('invoice_prefill', None)
         with st.form('upload', clear_on_submit=False):
             a, b = st.columns(2)
             seller = a.text_input(t('SME name'), placeholder=t('E.g. Atelier Nova'), key='ui_sme_name', value=st.session_state.get('ui_sme_name', ''))
@@ -203,13 +228,14 @@ elif page == 'Upload an invoice':
             due = a.date_input(t('Due date'), value=st.session_state.get('ui_due_date', date.today() + timedelta(days=60)), min_value=date.today() + timedelta(days=1), key='ui_due_date')
             strength = b.selectbox(t('Declared buyer financial strength'), ['Strong', 'Average', 'Weak'], key='ui_declared_buyer_financial_strength', format_func=t, index=selected_index('ui_declared_buyer_financial_strength', ['Strong', 'Average', 'Weak']))
             history = a.selectbox(t('Declared payment history'), ['On time', 'Occasional delays', 'Frequent delays'], key='ui_declared_payment_history', format_func=t, index=selected_index('ui_declared_payment_history', ['On time', 'Occasional delays', 'Frequent delays']))
-            upload = st.file_uploader(t('Original invoice · PDF, PNG or JPEG · 10 MB max.'), type=['pdf', 'png', 'jpg', 'jpeg'], key='ui_original_invoice_pdf_png_or_jpeg_10_mb_max')
-            st.caption(t('Optional for the demo. The file is only used to calculate a fingerprint, without automatic extraction. Use fictional documents.'))
+            st.caption(t('The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.'))
             identity = st.checkbox(t('Simulate verified SME identity'), key='ui_simulate_verified_sme_identity', value=st.session_state.get('ui_simulate_verified_sme_identity', False))
             documents = st.checkbox(t('Simulate complete documentation: invoice, purchase order and proof of delivery'), key='ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', value=st.session_state.get('ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', False))
             submitted = st.form_submit_button(t('Submit invoice'), type='primary')
         if submitted:
             try:
+                if amount is None or issued is None or due is None:
+                    raise ValueError('Enter the invoice amount, issue date and due date before submitting.')
                 item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=documents, identity=identity, strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
                 database.add(item)
                 st.session_state.focus_invoice = item['id']

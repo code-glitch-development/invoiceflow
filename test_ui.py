@@ -32,6 +32,49 @@ class InterfaceTests(unittest.TestCase):
                     at.sidebar.radio(key='language').set_value(language).run()
                     self.assertFalse(at.exception, (language, profile, page, list(at.exception)))
 
+    def test_upload_prefills_editable_fields_and_saves_corrections(self):
+        from io import BytesIO
+        from test_extraction import text_pdf
+        upload = BytesIO(text_pdf())
+        upload.name = 'invoice-test.pdf'
+        with patch('streamlit.file_uploader', return_value=upload):
+            at = self.app()
+            at.sidebar.radio(key='ui_navigation').set_value('Upload an invoice').run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.text_input(key='ui_invoice_reference').value, 'AUTO-TEST-001')
+            self.assertEqual(at.text_input(key='ui_sme_name').value, 'Atelier Exemple')
+            self.assertEqual(at.number_input(key='ui_invoice_amount').value, 420.0)
+            at.text_input(key='ui_sme_name').set_value('Corrected supplier').run()
+            at.number_input(key='ui_invoice_amount').set_value(450.0).run()
+            at.sidebar.radio(key='language').set_value('FR').run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.text_input(key='ui_sme_name').value, 'Corrected supplier')
+            self.assertEqual(at.number_input(key='ui_invoice_amount').value, 450.0)
+            # Extraction must not mark verification declarations as completed.
+            self.assertFalse(at.checkbox(key='ui_simulate_verified_sme_identity').value)
+            next(b for b in at.button if b.label == 'Déposer la facture').click().run()
+            self.assertFalse(at.exception)
+            saved = next(i for i in at.session_state['invoices'] if i['reference'] == 'AUTO-TEST-001')
+            self.assertEqual(saved['seller'], 'Corrected supplier')
+            self.assertEqual(saved['amount'], 450.0)
+            self.assertTrue(saved['file_hash'])
+
+    def test_unreadable_upload_does_not_submit_or_crash(self):
+        from io import BytesIO
+        upload = BytesIO(b'invalid')
+        upload.name = 'bad.pdf'
+        with patch('streamlit.file_uploader', return_value=upload):
+            at = self.app()
+            count = len(at.session_state['invoices'])
+            at.sidebar.radio(key='ui_navigation').set_value('Upload an invoice').run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.text_input(key='ui_invoice_reference').value, '')
+            self.assertIsNone(at.number_input(key='ui_invoice_amount').value)
+            next(b for b in at.button if b.label == 'Submit invoice').click().run()
+            self.assertFalse(at.exception)
+            self.assertTrue(at.error)
+            self.assertEqual(len(at.session_state['invoices']), count)
+
     def test_role_switch_changes_interface_and_preserves_records(self):
         from i18n import Translator
         from workspaces import WORKSPACES, overview
