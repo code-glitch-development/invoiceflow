@@ -21,6 +21,26 @@ class InterfaceTests(unittest.TestCase):
         from streamlit.testing.v1 import AppTest
         return AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20).run()
 
+    def test_catalog_populates_existing_database_once_without_overwriting(self):
+        import os
+        from engine import seed, finance
+        from storage import InvoiceStore
+        records = seed()
+        finance(records[0], 4, False, 0)
+        store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        store.initialize(records)
+        before = store.load()
+        at = self.app()
+        self.assertFalse(at.exception)
+        self.assertEqual(len(at.session_state['invoices']), 30)
+        self.assertEqual(at.session_state['invoices'][:4], before)
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        self.assertFalse(at.exception)
+        self.assertGreaterEqual(len([c for c in at.checkbox if c.key.startswith('compare_')]), 12)
+        identifiers = [i['id'] for i in at.session_state['invoices']]
+        at.run()
+        self.assertEqual([i['id'] for i in at.session_state['invoices']], identifiers)
+
     def test_all_screens(self):
         from workspaces import WORKSPACES
         at = self.app()
@@ -77,7 +97,7 @@ class InterfaceTests(unittest.TestCase):
     def test_opportunity_batch_confirm_saves_exact_review(self):
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
-        identifiers = [c.key.removeprefix('compare_') for c in at.checkbox if c.key.startswith('compare_')]
+        identifiers = [c.key.removeprefix('compare_') for c in at.checkbox if c.key.startswith('compare_')][:3]
         self.assertEqual(len(identifiers), 3)
         for identifier in identifiers:
             at.checkbox(key='compare_' + identifier).check().run()

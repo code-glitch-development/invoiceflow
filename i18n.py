@@ -1092,6 +1092,12 @@ FR.update({'Opportunities': 'Opportunités',
 FR.update({'Selection terms: no SME recourse and no hypothetical insurance coverage.': 'Conditions de la sélection : sans recours contre la PME et sans couverture d’assurance hypothétique.'})
 
 
+FR.update({
+    'Restore demo examples': 'Compléter les exemples de démonstration',
+    'Restore missing fictional examples from the 30-invoice catalog without replacing saved invoices.': 'Ajoutez les exemples manquants du catalogue de 30 factures fictives sans remplacer les factures enregistrées.',
+})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

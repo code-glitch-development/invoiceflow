@@ -119,3 +119,16 @@ class InvoiceStore:
             for invoice in additions:
                 self._insert(db, invoice)
         return len(additions)
+
+    def populate_demo_catalog(self, *, once=False):
+        """Append missing fictional samples atomically, optionally once per database."""
+        from demo_catalog import CATALOG_VERSION, catalog_examples
+        with self.transaction() as db:
+            if once and db.execute('SELECT 1 FROM metadata WHERE key = ?', (CATALOG_VERSION,)).fetchone():
+                return 0
+            existing = [json.loads(row[0]) for row in db.execute('SELECT payload FROM invoices')]
+            additions = catalog_examples(existing)
+            for invoice in additions:
+                self._insert(db, invoice)
+            db.execute('INSERT OR IGNORE INTO metadata VALUES (?, ?)', (CATALOG_VERSION, '1'))
+        return len(additions)

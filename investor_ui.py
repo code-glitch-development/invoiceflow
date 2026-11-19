@@ -182,10 +182,10 @@ def render_investor(page, invoices, database, t, euro, navigate):
                 st.button(t('View invoice details'), key='dossier_' + identifier,
                     on_click=open_dossier, args=(entry, navigate), use_container_width=True)
         with st.expander(t('Demo data and unavailable offers')):
-            st.caption(t('Add two fictional eligible examples without replacing existing invoices.'))
-            if st.button(t('Add investor examples'), key='investor_add_examples'):
+            st.caption(t('Restore missing fictional examples from the 30-invoice catalog without replacing saved invoices.'))
+            if st.button(t('Restore demo examples'), key='investor_add_examples'):
                 try:
-                    database.add_examples()
+                    database.populate_demo_catalog()
                     st.rerun()
                 except ValueError as exc:
                     st.error(t(str(exc)))

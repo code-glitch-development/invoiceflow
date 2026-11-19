@@ -167,6 +167,17 @@ transaction. Either the entire selection is recorded or none is. Changes to
 quotes, budget, selection, or the shared portfolio invalidate the review. No
 money is transferred. Existing financed invoices retain their saved pricing.
 
-New workspaces include two extra fictional eligible invoices. For an existing
-database, use `Add investor examples` under `Demo data and unavailable offers`;
-this appends missing examples without replacing existing records.
+New and existing workspaces receive a catalog of 30 fictional invoices (including
+the four original samples). It contains 19 eligible opportunities, plus pending,
+incomplete, disputed, financed and paid examples, spread across six buyers and
+several amounts and due dates. Dates are relative to the day the samples are
+created; completed examples include consistent financing and payment dates.
+
+A versioned, atomic database migration appends missing samples once. It preserves
+existing invoices, their IDs, versions, edits, financing and payment events.
+Reloading does not duplicate examples or recreate ones subsequently removed.
+Existing custom invoices can bring the total above 30. To append missing catalog
+examples again, use `Restore demo examples` under `Demo data and unavailable
+offers`. `Reload examples` replaces the workspace with the full 30-invoice demo
+only after the existing reset checkbox is selected. These fictional workflow
+records do not change the separate fixed annual PD cohorts.
