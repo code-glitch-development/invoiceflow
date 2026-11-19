@@ -2,9 +2,9 @@ from datetime import date, timedelta
 import json
 import pandas as pd
 import streamlit as st
-from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle
+from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session
 
-st.set_page_config(page_title='InvoiceFlow · Démonstrateur', page_icon='↗', layout='wide')
+st.set_page_config(page_title='InvoiceFlow · Demo', page_icon='↗', layout='wide')
 st.markdown('''<style>
 .block-container {padding-top:2rem; max-width:1400px}
 [data-testid="stSidebar"] {background:#13253c}
@@ -18,229 +18,230 @@ st.markdown('''<style>
 if 'invoices' not in st.session_state:
     st.session_state.invoices = seed()
 invoices = st.session_state.invoices
+migrate_session(invoices)
 
 def euro(n):
-    return f'{n:,.2f} €'.replace(',', ' ').replace('.', ',')
+    return f'€{n:,.2f}'
 
 def table(items):
-    return pd.DataFrame([{'Référence': i['reference'], 'PME': i['seller'], 'Client': i['buyer'],
-        'Montant (€)': i['amount'], 'Échéance': i['due'], 'Statut': i['status'],
-        'Score /100': score(i)[0], 'Suivi': i['outcome'] or '—'} for i in items])
+    return pd.DataFrame([{'Reference': i['reference'], 'SME': i['seller'], 'Buyer': i['buyer'],
+        'Amount (€)': i['amount'], 'Due date': i['due'], 'Status': i['status'],
+        'Score /100': score(i)[0], 'Tracking': i['outcome'] or '—'} for i in items])
 
 def pick(items, key):
-    return st.selectbox('Facture', [i['id'] for i in items], key=key,
+    return st.selectbox('Invoice', [i['id'] for i in items], key=key,
         format_func=lambda value: next(f"{i['reference']} · {i['seller']} · {euro(i['amount'])}" for i in items if i['id'] == value))
 
 def detail(i):
     a,b,c = st.columns(3)
-    a.metric('Montant de la facture', euro(i['amount']))
-    b.metric('Score pédagogique', f'{score(i)[0]} / 100')
-    c.metric('Échéance', date.fromisoformat(i['due']).strftime('%d/%m/%Y'))
-    with st.expander('Vérifications et traçabilité'):
+    a.metric('Invoice amount', euro(i['amount']))
+    b.metric('Demo score', f'{score(i)[0]} / 100')
+    c.metric('Due date', date.fromisoformat(i['due']).strftime('%d %b %Y'))
+    with st.expander('Checks and audit trail'):
         st.dataframe(pd.DataFrame([
-            {'Contrôle': 'Identité PME', 'Résultat': 'Déclarée vérifiée (simulation)' if i['identity'] else 'À compléter'},
-            {'Contrôle': 'Facture, commande, livraison', 'Résultat': 'Pièces déclarées complètes' if i['documents'] else 'À compléter'},
-            {'Contrôle': 'Confirmation du client', 'Résultat': i['buyer_status']},
-            {'Contrôle': 'Unicité dans la session', 'Résultat': 'Référence fournisseur et fichier contrôlés'},
-            {'Contrôle': 'Risque pédagogique', 'Résultat': f"{score(i)[0]}/100 · seuil 65"},
+            {'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Incomplete'},
+            {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Incomplete'},
+            {'Check': 'Buyer confirmation', 'Result': i['buyer_status']},
+            {'Check': 'Uniqueness within this session', 'Result': 'Supplier reference and file checked'},
+            {'Check': 'Demo risk assessment', 'Result': f"{score(i)[0]}/100 · threshold 65"},
         ]), hide_index=True, use_container_width=True)
-        st.caption('Aucun contrôle officiel, OCR ou échange avec un client réel. Les cases du dépôt sont des déclarations de démonstration.')
-        st.write('Empreinte SHA-256 des métadonnées')
+        st.caption('No official checks, OCR or contact with a real buyer. The upload checkboxes are demo declarations.')
+        st.write('SHA-256 fingerprint of metadata')
         st.code(i['record_hash'])
         if i['file_hash']:
-            st.write('Empreinte du fichier déposé')
+            st.write('Uploaded file fingerprint')
             st.code(i['file_hash'])
-        st.caption('Registre local à la session, sans blockchain. Une empreinte ne prouve ni la réalisation de la prestation, ni l’absence de cession sur une autre plateforme.')
-        st.write('Barème du score')
-        st.dataframe(pd.DataFrame([{'Critère': k, 'Points': v} for k,v in score(i)[1].items()]), hide_index=True)
-        st.caption('Maximum 100 : solidité 40/25/5 ; historique 25/15/0 ; confirmation 25 ; pièces 10. Ce score ne constitue pas une probabilité de défaut.')
+        st.caption('Session-local register, without blockchain. A fingerprint proves neither delivery of the service nor the absence of assignment on another platform.')
+        st.write('Score breakdown')
+        st.dataframe(pd.DataFrame([{'Criterion': k, 'Points': v} for k,v in score(i)[1].items()]), hide_index=True)
+        st.caption('Maximum 100: financial strength 40/25/5; payment history 25/15/0; confirmation 25; documents 10. This score is not a probability of default.')
     if i['note']:
         st.info(i['note'])
 
 with st.sidebar:
     st.title('InvoiceFlow ↗')
     st.caption('VERIFIED INVOICES. FASTER PAYMENTS.')
-    profile = st.selectbox('Espace de démonstration', ['PME', 'Client final', 'Investisseur'])
-    page = st.radio('Navigation', ['Vue d’ensemble', 'Déposer une facture', 'Validation client', 'Financement', 'Simulateur', 'Portefeuille'])
+    profile = st.selectbox('Demo role', ['SME', 'Buyer', 'Investor'])
+    page = st.radio('Navigation', ['Overview', 'Upload an invoice', 'Buyer confirmation', 'Financing', 'Simulator', 'Portfolio'])
     st.divider()
-    st.caption('Prototype pédagogique · NEOMA\n\nTous les acteurs et toutes les opérations sont fictifs. Aucun transfert d’argent.')
-    with st.expander('Réinitialiser la démo'):
-        reset = st.checkbox('Effacer les données de cette session')
-        if st.button('Recharger les exemples', disabled=not reset):
+    st.caption('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.')
+    with st.expander('Reset demo'):
+        reset = st.checkbox('Clear the data in this session')
+        if st.button('Reload examples', disabled=not reset):
             st.session_state.invoices = seed()
             st.rerun()
 
-st.markdown('<div class="hero"><div class="eyebrow">INVOICEFLOW / DÉMO INTERACTIVE</div><h1>Vos factures. Votre trésorerie.</h1><p>Déposez, faites confirmer, simulez le financement.</p></div>', unsafe_allow_html=True)
-st.caption(f'Espace {profile} · Profils librement interchangeables pour la démonstration, sans authentification. Les données restent dans la session courante et peuvent disparaître à sa fermeture.')
+st.markdown('<div class="hero"><div class="eyebrow">INVOICEFLOW / INTERACTIVE DEMO</div><h1>Your invoices. Your cash flow.</h1><p>Upload, confirm and simulate financing.</p></div>', unsafe_allow_html=True)
+st.caption(f'{profile} workspace · Switch roles freely for the demo; there is no authentication. Data stays in the current session and may be lost when it ends.')
 if 'notice' in st.session_state:
     st.success(st.session_state.pop('notice'))
 
-if page == 'Vue d’ensemble':
+if page == 'Overview':
     a,b,c,d = st.columns(4)
-    a.metric('Volume déposé', euro(sum(i['amount'] for i in invoices)))
-    b.metric('Factures à confirmer', sum(i['buyer_status']=='En attente' for i in invoices))
-    c.metric('Éligibles à la simulation', sum(eligible(i) for i in invoices))
-    d.metric('Avances simulées', euro(sum(i['financing']['advance'] for i in invoices if i['financing'])))
-    st.subheader('Du dépôt au paiement anticipé')
+    a.metric('Submitted volume', euro(sum(i['amount'] for i in invoices)))
+    b.metric('Invoices awaiting confirmation', sum(i['buyer_status']=='Pending' for i in invoices))
+    c.metric('Eligible for financing simulation', sum(eligible(i) for i in invoices))
+    d.metric('Simulated advances', euro(sum(i['financing']['advance'] for i in invoices if i['financing'])))
+    st.subheader('From upload to early payment')
     cols = st.columns(3)
-    for col, title, body in zip(cols, ['01 · La PME dépose', '02 · Le client confirme', '03 · Le financeur décide'],
-        ['Informations, pièces et contrôle des doublons.', 'Validation ou contestation de la prestation.', 'Score, commission et scénario de couverture.']):
+    for col, title, body in zip(cols, ['01 · The SME uploads', '02 · The buyer confirms', '03 · The investor decides'],
+        ['Details, documents and duplicate checks.', 'Confirm or dispute the service.', 'Score, fee and coverage scenario.']):
         with col:
             st.markdown(f'**{title}**')
             st.write(body)
-    st.subheader('Activité récente')
+    st.subheader('Recent activity')
     st.dataframe(table(invoices), use_container_width=True, hide_index=True)
-    st.info('Parcours conseillé : PME → dépôt ; Client final → validation ; Investisseur → financement ; Portefeuille → suivi du règlement.')
+    st.info('Suggested journey: SME → upload; Buyer → confirmation; Investor → financing; Portfolio → payment tracking.')
 
-elif page == 'Déposer une facture':
-    st.subheader('Libérez votre trésorerie')
-    if profile != 'PME':
-        st.info('Sélectionnez le profil PME pour déposer une facture.')
+elif page == 'Upload an invoice':
+    st.subheader('Unlock your cash flow')
+    if profile != 'SME':
+        st.info('Select the SME role to upload an invoice.')
     else:
         with st.form('upload', clear_on_submit=False):
             a,b = st.columns(2)
-            seller = a.text_input('Nom de la PME', placeholder='Ex. Atelier Nova')
-            siren = b.text_input('SIREN · format de 9 chiffres', max_chars=9)
-            buyer = a.text_input('Client final', placeholder='Ex. Groupe Horizon')
-            reference = b.text_input('Référence de facture')
-            amount = a.number_input('Montant de la facture (€)', min_value=1.0, value=10000.0, step=100.0)
-            issued = b.date_input('Date d’émission', value=date.today(), max_value=date.today())
-            due = a.date_input('Date d’échéance', value=date.today()+timedelta(days=60), min_value=date.today()+timedelta(days=1))
-            strength = b.selectbox('Solidité déclarée du client', ['Solide', 'Intermédiaire', 'Fragile'])
-            history = a.selectbox('Historique déclaré de paiement', ['Ponctuel', 'Retards occasionnels', 'Retards fréquents'])
-            upload = st.file_uploader('Facture originale · PDF, PNG ou JPEG · 10 Mo max.', type=['pdf','png','jpg','jpeg'])
-            st.caption('Facultatif pour la démo. Le fichier sert uniquement au calcul d’empreinte, sans lecture automatique. Utilisez des pièces fictives.')
-            identity = st.checkbox('Simuler une identité PME vérifiée')
-            documents = st.checkbox('Simuler un dossier complet : facture, bon de commande et preuve de livraison')
-            submitted = st.form_submit_button('Déposer la facture', type='primary')
+            seller = a.text_input('SME name', placeholder='E.g. Atelier Nova')
+            siren = b.text_input('SIREN · 9-digit format', max_chars=9)
+            buyer = a.text_input('Buyer', placeholder='E.g. Groupe Horizon')
+            reference = b.text_input('Invoice reference')
+            amount = a.number_input('Invoice amount (€)', min_value=1.0, value=10000.0, step=100.0)
+            issued = b.date_input('Issue date', value=date.today(), max_value=date.today())
+            due = a.date_input('Due date', value=date.today()+timedelta(days=60), min_value=date.today()+timedelta(days=1))
+            strength = b.selectbox('Declared buyer financial strength', ['Strong', 'Average', 'Weak'])
+            history = a.selectbox('Declared payment history', ['On time', 'Occasional delays', 'Frequent delays'])
+            upload = st.file_uploader('Original invoice · PDF, PNG or JPEG · 10 MB max.', type=['pdf','png','jpg','jpeg'])
+            st.caption('Optional for the demo. The file is only used to calculate a fingerprint, without automatic extraction. Use fictional documents.')
+            identity = st.checkbox('Simulate verified SME identity')
+            documents = st.checkbox('Simulate complete documentation: invoice, purchase order and proof of delivery')
+            submitted = st.form_submit_button('Submit invoice', type='primary')
         if submitted:
             try:
                 item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference,
                     amount=amount, issued=issued, due=due, documents=documents, identity=identity,
                     strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
                 invoices.append(item)
-                st.session_state.notice = f"Facture {item['reference']} déposée. Passez au profil Client final pour la confirmer."
+                st.session_state.notice = f"Invoice {item['reference']} submitted. Switch to the Buyer role to confirm it."
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
 
-elif page == 'Validation client':
-    st.subheader('Confirmez les factures de vos fournisseurs')
-    if profile != 'Client final':
-        st.info('Sélectionnez le profil Client final pour confirmer ou contester une facture.')
+elif page == 'Buyer confirmation':
+    st.subheader('Confirm your supplier invoices')
+    if profile != 'Buyer':
+        st.info('Select the Buyer role to confirm or dispute an invoice.')
     else:
-        buyer = st.selectbox('Client représenté (simulation)', sorted({i['buyer'] for i in invoices}))
-        items = [i for i in invoices if i['buyer']==buyer and i['status'] not in ('Financée','Clôturée')]
+        buyer = st.selectbox('Represented buyer (simulation)', sorted({i['buyer'] for i in invoices}))
+        items = [i for i in invoices if i['buyer']==buyer and i['status'] not in ('Financed','Closed')]
         if not items:
-            st.info('Aucune facture à traiter pour ce client.')
+            st.info('No invoices to process for this buyer.')
         else:
             selected = pick(items, 'confirm_pick')
             i = next(i for i in items if i['id']==selected)
             detail(i)
             with st.form('confirm'):
-                decision = st.radio('Décision', ['Confirmer', 'Contester'], horizontal=True)
-                attestation = st.checkbox('Je simule la confirmation de la prestation, du montant, de l’échéance et de l’absence de règlement ou litige.')
-                note = st.text_area('Commentaire · obligatoire en cas de contestation')
-                submit = st.form_submit_button('Enregistrer la décision', type='primary')
+                decision = st.radio('Decision', ['Confirm', 'Dispute'], horizontal=True)
+                attestation = st.checkbox('I simulate confirmation of the service, amount and due date, and that the invoice is unpaid and undisputed.')
+                note = st.text_area('Comment · required for a dispute')
+                submit = st.form_submit_button('Save decision', type='primary')
             if submit:
                 try:
-                    if decision=='Confirmer' and not attestation:
-                        raise ValueError('Cochez la confirmation des informations pour valider.')
-                    confirm(i, decision=='Confirmer', note)
-                    st.session_state.notice = 'Décision enregistrée.'
+                    if decision=='Confirm' and not attestation:
+                        raise ValueError('Check the confirmation box to approve the invoice.')
+                    confirm(i, decision=='Confirm', note)
+                    st.session_state.notice = 'Decision saved.'
                     st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))
 
-elif page == 'Financement':
-    st.subheader('Financez des factures confirmées')
-    if profile != 'Investisseur':
-        st.info('Sélectionnez le profil Investisseur pour simuler un financement.')
+elif page == 'Financing':
+    st.subheader('Finance confirmed invoices')
+    if profile != 'Investor':
+        st.info('Select the Investor role to simulate financing.')
     else:
-        items = [i for i in invoices if i['status'] not in ('Financée','Clôturée')]
+        items = [i for i in invoices if i['status'] not in ('Financed','Closed')]
         if not items:
-            st.info('Aucune facture disponible.')
+            st.info('No invoices available.')
         else:
             selected = pick(items, 'finance_pick')
             i = next(i for i in items if i['id']==selected)
             detail(i)
-            st.caption('Conditions de la démo : confirmation client, identité et pièces déclarées vérifiées, échéance future et score ≥ 65/100.')
-            rate = st.slider('Commission sur le montant nominal (%)', 0.0, 10.0, 4.0, .1)
-            recourse = st.toggle('Avec recours contre la PME', value=False)
-            coverage = st.slider('Couverture théorique de l’insolvabilité (% du nominal)', 0, 100, 80)
+            st.caption('Demo requirements: buyer confirmation, identity and documents declared verified, a future due date and a score ≥ 65/100.')
+            rate = st.slider('Fee on face value (%)', 0.0, 10.0, 4.0, .1)
+            recourse = st.toggle('With recourse to the SME', value=False)
+            coverage = st.slider('Hypothetical insolvency coverage (% of face value)', 0, 100, 80)
             q = quote(i['amount'], rate)
             a,b = st.columns(2)
-            a.metric('Avance simulée à la PME', euro(q['advance']))
-            b.metric('Marge brute si règlement intégral', euro(q['fee']))
-            st.caption('Avant coût du capital, assurance, pertes et frais opérationnels. La couverture est une hypothèse et aucun assureur n’est connecté.')
+            a.metric('Simulated advance to the SME', euro(q['advance']))
+            b.metric('Gross margin if paid in full', euro(q['fee']))
+            st.caption('Before capital costs, insurance, losses and operating expenses. Coverage is hypothetical; no insurer is connected.')
             if not eligible(i):
-                st.warning('Conditions non remplies : financement indisponible pour cette facture.')
-            if st.button('Simuler le financement', type='primary', disabled=not eligible(i)):
+                st.warning('Requirements not met: financing is unavailable for this invoice.')
+            if st.button('Simulate financing', type='primary', disabled=not eligible(i)):
                 try:
                     finance(i, rate, recourse, coverage)
-                    st.session_state.notice = 'Financement simulé enregistré dans le portefeuille.'
+                    st.session_state.notice = 'Simulated financing saved to the portfolio.'
                     st.rerun()
                 except ValueError as exc:
                     st.error(str(exc))
 
-elif page == 'Simulateur':
-    st.subheader('Testez vos hypothèses de financement')
+elif page == 'Simulator':
+    st.subheader('Explore financing scenarios')
     a,b = st.columns(2)
-    amount = a.number_input('Facture (€)', min_value=1.0, value=10000.0, step=100.0)
-    rate = b.slider('Commission (%)', 0.0, 10.0, 4.0, .1)
-    coverage = a.slider('Couverture théorique de l’insolvabilité (%)', 0, 100, 80)
-    recourse = b.toggle('Avec recours', value=False)
+    amount = a.number_input('Invoice (€)', min_value=1.0, value=10000.0, step=100.0)
+    rate = b.slider('Fee (%)', 0.0, 10.0, 4.0, .1)
+    coverage = a.slider('Hypothetical insolvency coverage (%)', 0, 100, 80)
+    recourse = b.toggle('With recourse', value=False)
     result = loss_scenario(amount, rate, coverage, recourse)
     x,y,z = st.columns(3)
-    x.metric('Avance immédiate', euro(result['advance']))
-    y.metric('Commission brute', euro(result['fee']))
-    z.metric('Capital exposé après assurance', euro(result['residual']))
+    x.metric('Immediate advance', euro(result['advance']))
+    y.metric('Gross fee', euro(result['fee']))
+    z.metric('Capital at risk after insurance', euro(result['residual']))
     st.dataframe(pd.DataFrame([
-        {'Scénario': 'Paiement intégral', 'Conséquence dans le modèle': f"{euro(amount)} encaissés ; marge brute {euro(result['fee'])}."},
-        {'Scénario': 'Retard', 'Conséquence dans le modèle': 'Pas de perte définitive calculée ; durée du financement prolongée.'},
-        {'Scénario': 'Insolvabilité couverte', 'Conséquence dans le modèle': f"Indemnité hypothétique {euro(result['indemnity'])} ; capital résiduel {euro(result['residual'])}."},
-        {'Scénario': 'Contestation / fraude', 'Conséquence dans le modèle': 'Couverture non supposée ; exposition pouvant atteindre la totalité de l’avance.'},
+        {'Scenario': 'Full payment', 'Model outcome': f"{euro(amount)} received; gross margin {euro(result['fee'])}."},
+        {'Scenario': 'Late payment', 'Model outcome': 'No final loss calculated; financing period extended.'},
+        {'Scenario': 'Covered insolvency', 'Model outcome': f"Hypothetical indemnity {euro(result['indemnity'])} ; residual capital {euro(result['residual'])}."},
+        {'Scenario': 'Dispute / fraud', 'Model outcome': 'No coverage assumed; exposure may reach the full advance.'},
     ]), hide_index=True, use_container_width=True)
     if recourse:
-        st.info(f"Hypothèse de recours : créance sur la PME de {euro(result['supplier_claim'])} après indemnisation. Son recouvrement reste incertain ; l’exposition n’est pas annulée.")
-    st.caption('Hypothèses simplifiées : couverture appliquée au nominal, indemnité plafonnée à l’avance, aucun recouvrement, franchise, délai ou coût pris en compte. Le sans recours ne signifie pas une protection contre toute fraude ou contestation.')
-    st.subheader('Simulation de chiffre d’affaires')
-    count = st.number_input('Factures financées par mois', min_value=1, value=100, step=1)
+        st.info(f"Recourse assumption: a claim against the SME for {euro(result['supplier_claim'])} after indemnification. Recovery remains uncertain; the exposure is not eliminated.")
+    st.caption('Simplified assumptions: coverage applied to face value, indemnity capped at the advance; no recoveries, deductibles, delays or costs included. Non-recourse does not mean protection against every fraud or dispute.')
+    st.subheader('Revenue simulation')
+    count = st.number_input('Invoices financed per month', min_value=1, value=100, step=1)
     a,b = st.columns(2)
-    a.metric('Commission mensuelle théorique', euro(count*result['fee']))
-    b.metric('Commission annuelle théorique', euro(count*result['fee']*12))
-    st.caption('À volume constant, avant toutes charges. Cette simulation ne constitue pas une prévision commerciale.')
+    a.metric('Hypothetical monthly fee revenue', euro(count*result['fee']))
+    b.metric('Hypothetical annual fee revenue', euro(count*result['fee']*12))
+    st.caption('At constant volume, before all expenses. This simulation is not a business forecast.')
 
-elif page == 'Portefeuille':
-    st.subheader('Suivi des factures et des opérations')
-    statuses = st.multiselect('Filtrer les statuts', sorted({i['status'] for i in invoices}))
+elif page == 'Portfolio':
+    st.subheader('Invoice and transaction tracking')
+    statuses = st.multiselect('Filter statuses', sorted({i['status'] for i in invoices}))
     items = [i for i in invoices if not statuses or i['status'] in statuses]
     st.dataframe(table(items), hide_index=True, use_container_width=True)
-    st.download_button('Exporter la vue en CSV', table(items).to_csv(index=False).encode('utf-8-sig'), 'invoiceflow_factures.csv', 'text/csv')
-    st.download_button('Exporter la session en JSON', json.dumps(invoices, ensure_ascii=False, indent=2), 'invoiceflow_session.json', 'application/json')
+    st.download_button('Export view as CSV', table(items).to_csv(index=False).encode('utf-8-sig'), 'invoiceflow_invoices.csv', 'text/csv')
+    st.download_button('Export session as JSON', json.dumps(invoices, ensure_ascii=False, indent=2), 'invoiceflow_session.json', 'application/json')
     financed = [i for i in invoices if i['financing']]
     if financed:
         selected = pick(financed, 'portfolio_pick')
         i = next(i for i in financed if i['id']==selected)
         detail(i)
         f = i['financing']
-        st.write(f"Avance : **{euro(f['advance'])}** · Commission : **{f['rate']} %** · Couverture hypothétique : **{f['coverage']} %** · {'Avec recours' if f['recourse'] else 'Sans recours'}")
-        if i['outcome'] == 'Insolvabilité':
+        st.write(f"Advance: **{euro(f['advance'])}** · Fee: **{f['rate']} %** · Hypothetical coverage: **{f['coverage']} %** · {'With recourse' if f['recourse'] else 'Without recourse'}")
+        if i['outcome'] == 'Insolvency':
             r = loss_scenario(i['amount'], f['rate'], f['coverage'], f['recourse'])
-            st.warning(f"Scénario d’insolvabilité : indemnité théorique {euro(r['indemnity'])}, capital restant exposé {euro(r['residual'])}. Aucun paiement réel.")
-        elif i['outcome'] == 'Litige':
-            st.warning(f"Litige : aucune indemnité supposée. Capital exposé : {euro(f['advance'])}.")
-        elif i['outcome'] == 'Retard':
-            st.info('Règlement en attente. Aucun revenu encaissé ni indemnisation automatique supposés.')
-        elif i['outcome'] == 'Payée':
-            st.success(f"Règlement intégral simulé. Marge brute théorique : {euro(f['fee'])}.")
-        if profile == 'Investisseur' and i['status']=='Financée':
+            st.warning(f"Insolvency scenario: hypothetical indemnity {euro(r['indemnity'])}, remaining capital at risk {euro(r['residual'])}. No real payment.")
+        elif i['outcome'] == 'Dispute':
+            st.warning(f"Dispute: no indemnity assumed. Capital at risk: {euro(f['advance'])}.")
+        elif i['outcome'] == 'Late payment':
+            st.info('Payment pending. No collected revenue or automatic indemnity assumed.')
+        elif i['outcome'] == 'Paid':
+            st.success(f"Full payment simulated. Hypothetical gross margin: {euro(f['fee'])}.")
+        if profile == 'Investor' and i['status']=='Financed':
             with st.form('settle'):
-                outcome = st.selectbox('Événement à simuler', ['Payée','Retard','Insolvabilité','Litige'])
-                if st.form_submit_button('Enregistrer le suivi'):
+                outcome = st.selectbox('Event to simulate', ['Paid','Late payment','Insolvency','Dispute'])
+                if st.form_submit_button('Save tracking update'):
                     settle(i, outcome)
-                    st.session_state.notice = 'Suivi mis à jour.'
+                    st.session_state.notice = 'Tracking updated.'
                     st.rerun()
 
 st.divider()
-st.caption('InvoiceFlow · Démonstrateur académique basé sur votre concept. Validation, score, assurance et financement simulés ; aucun service bancaire, registre externe ou blockchain connecté.')
+st.caption('InvoiceFlow · Academic demo based on your concept. Confirmation, scoring, insurance and financing are simulated; no banking service, external register or blockchain is connected.')

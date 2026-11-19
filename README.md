@@ -1,72 +1,71 @@
 # InvoiceFlow ↗
 
-Application Streamlit en français, créée à partir du concept InvoiceFlow fourni.
-Démo académique de financement de factures / reverse factoring, sans transfert d’argent.
+An English-language Streamlit demo for invoice financing and reverse factoring, based on the supplied InvoiceFlow concept. All companies and transactions are fictional. No money is transferred.
 
-## Démarrage local
+## Run locally
 
-Prérequis : Python 3.10 ou supérieur.
-Décompressez le projet, ouvrez un terminal dans le dossier `invoiceflow`, puis :
+Requires Python 3.10 or later. Open a terminal in the project folder:
 
 ```bash
 python -m venv .venv
 ```
 
-Activez l’environnement :
+Activate the environment:
 
-- Windows PowerShell : `.venv\Scripts\Activate.ps1`
-- macOS / Linux : `source .venv/bin/activate`
+- Windows PowerShell: `.venv\Scripts\Activate.ps1`
+- macOS / Linux: `source .venv/bin/activate`
 
 ```bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Ouvrez l’adresse affichée dans le terminal, généralement http://localhost:8501.
-Aucune clé API n’est nécessaire.
+Open the address shown in the terminal, usually http://localhost:8501. No API key is required.
 
-## Démonstration en 3 minutes
+## Three-minute demo
 
-1. Dans **Vue d’ensemble**, explorez les quatre exemples fictifs.
-2. Profil **PME**, page **Déposer une facture** : saisissez une nouvelle référence, un SIREN fictif de 9 chiffres, un montant et une échéance future. Choisissez une solidité « Solide » et un historique « Ponctuel ». Cochez les deux contrôles simulés.
-3. Profil **Client final**, page **Validation client** : choisissez le client et la facture, cochez la confirmation puis validez. Vous pouvez aussi contester avec un motif.
-4. Profil **Investisseur**, page **Financement** : sélectionnez la facture confirmée, réglez commission, recours et couverture, puis simulez le financement.
-5. Dans **Portefeuille**, exportez la vue CSV ou la session JSON ; simulez un retard, un litige, une insolvabilité ou un règlement intégral.
-6. Le **Simulateur** fonctionne indépendamment du portefeuille et affiche les effets des hypothèses ainsi qu’une estimation de commissions mensuelles et annuelles.
+1. Open **Overview** to explore the four fictional examples.
+2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**, and tick both simulated checks.
+3. Select **Buyer → Buyer confirmation**. Choose the buyer and invoice, check the confirmation box and save. You can also dispute an invoice with a reason.
+4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
+5. Open **Portfolio** to export CSV or JSON, and simulate late payment, a dispute, insolvency or full payment.
+6. Use **Simulator** independently to explore advances, losses and hypothetical monthly and annual fee revenue.
 
-La barre latérale permet de réinitialiser les données. Les exemples utilisent des échéances relatives au jour du lancement.
+Use the sidebar to reset the demo. Example due dates are relative to the current date.
 
-## Fonctionnement et limites
+## Model and limitations
 
-- Les profils servent à la présentation et ne constituent pas une authentification. Toute personne dans la session peut changer de rôle et de client.
-- Données conservées dans `st.session_state` : pas de base de données, aucune synchronisation entre navigateurs, fermeture/reconnexion susceptible de perdre la session. Exportez le JSON pour conserver une trace ; l’import de sauvegarde n’est pas implémenté.
-- Dépôt PDF / PNG / JPEG facultatif, 10 Mo maximum : seule l’empreinte est conservée, aucun OCR ni archivage du fichier.
-- Détection de doublons limitée à la session : SIREN + référence normalisée, ou empreinte SHA-256 identique du fichier. Ne détecte pas les cessions sur d’autres plateformes, ni toutes les modifications d’une même facture.
-- SIREN : contrôle du format uniquement, sans vérification d’existence. Identité, pièces et données de risque sont des déclarations simulées.
-- Registre SHA-256 local des métadonnées, sans blockchain, horodatage certifié ni preuve de prestation.
-- Score explicable sur 100 : solidité 40/25/5, historique 25/15/0, confirmation 25, pièces 10. Seuil pédagogique ≥ 65, identité et pièces complètes, confirmation client et échéance future obligatoires. Aucune estimation réelle de défaut.
-- Financement : commission calculée sur la valeur nominale ; avance = nominal − commission. Aucun intérêt annualisé ou rendement garanti.
-- Insolvabilité : indemnité hypothétique = min(avance, nominal × couverture). Capital résiduel = avance − indemnité. Pour 10 000 €, 4 % et 80 %, cela donne 9 600 € avancés, 8 000 € d’indemnité et 1 600 € restant exposés, distincts des 2 000 € de nominal non couverts.
-- Le recours est modélisé comme une créance éventuelle sur la PME du résiduel après assurance, dont le recouvrement n’est jamais supposé acquis. Il n’annule pas le risque du financeur. Aucune assurance n’est supposée pour le scénario de contestation ou fraude.
-- Modèle volontairement simplifié : pas de franchise, carence, plafond contractuel, recouvrement, coût de financement ou coût d’assurance. Le cas « sans recours » n’est pas présenté comme une couverture universelle.
-- Les données fournies sont fictives ; utilisez uniquement des pièces fictives dans ce démonstrateur. Le projet ne fournit ni validation juridique ni service financier réel.
+- Roles are freely interchangeable for presentation purposes: there is no authentication or access control.
+- Data lives in `st.session_state`, without a database or sharing across browsers. Ending or reconnecting a session may lose the data. JSON export is provided; importing backups is not implemented.
+- Existing sessions from the French version have their predefined statuses and risk categories migrated automatically. User-entered names, references and comments are preserved.
+- Optional PDF / PNG / JPEG upload, maximum 10 MB. Only the fingerprint is retained; no OCR, automatic extraction or document archive.
+- Duplicate detection is limited to the current session: SIREN plus normalized reference, or an identical SHA-256 file fingerprint. It cannot detect assignments on other platforms or every modified version of an invoice.
+- SIREN validation checks the 9-digit format only, without checking company existence. Identity, documentation and financial information are simulated declarations.
+- Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
+- Transparent score out of 100: financial strength 40/25/5; payment history 25/15/0; buyer confirmation 25; documents 10. Financing requires a score ≥ 65, identity and documents declared complete, buyer confirmation and a future due date. The score is not a probability of default.
+- Fee = face value × fee rate. Advance = face value − fee. No annualized interest or guaranteed return is quoted.
+- Insolvency indemnity = min(advance, face value × hypothetical coverage). Residual capital = advance − indemnity. For a €10,000 invoice, 4% fee and 80% coverage: €9,600 advanced, €8,000 hypothetical indemnity and €1,600 residual capital at risk. This differs from the €2,000 of uncovered face value.
+- Recourse is modeled as a potential claim against the SME for the residual capital after indemnification. Recovery is uncertain and does not eliminate lender exposure. No insurance coverage is assumed for disputes or fraud.
+- Simplified assumptions exclude deductibles, waiting periods, contractual limits, recoveries, financing costs and insurance premiums. Non-recourse is not presented as universal protection.
+- Use fictional documents only. This is an academic prototype, with no real financial service or legal validation.
 
-## Déployer sur Streamlit Community Cloud
+## Deploy to Streamlit Community Cloud
 
-Placez les fichiers du dossier dans un dépôt GitHub, connectez ce dépôt à Streamlit Community Cloud et sélectionnez `app.py` comme fichier principal (ou `invoiceflow/app.py` si vous conservez le dossier parent). Aucun secret n’est requis. Le déploiement n’est pas réalisé par ce livrable. Chaque session conserve ses données séparément.
+Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required. Each browser session keeps its own data.
 
-## Vérification
+## Tests
 
 ```bash
 python -m unittest -v
 ```
 
-Les tests couvrent les calculs, les doublons, les préconditions de financement, la contestation et le cycle jusqu’au règlement. `test_ui.py` vérifie les écrans et le parcours entre profils avec le banc de test Streamlit.
+`test_engine.py` covers calculations, duplicates, eligibility, disputes, the financing/payment lifecycle and migration of existing French sessions. `test_ui.py` covers the screens and investor workflow using the Streamlit test runner.
 
-## Fichiers
+## Files
 
-- `app.py` : interface et parcours Streamlit.
-- `engine.py` : règles, calculs et jeu de données.
-- `requirements.txt` : dépendances.
-- `.streamlit/config.toml` : thème et limite d’envoi.
-- `test_engine.py`, `test_ui.py` : tests automatisés.
+- `app.py`: Streamlit interface and workflows.
+- `engine.py`: business rules, calculations, sample data and session migration.
+- `requirements.txt`: dependencies.
+- `.streamlit/config.toml`: theme and upload limit.
+- `test_engine.py`, `test_ui.py`: automated tests.
+- `VERIFICATION.md`: validation performed and limitations.

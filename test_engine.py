@@ -1,13 +1,27 @@
 import unittest
 from datetime import date, timedelta
-from engine import seed, new_invoice, confirm, finance, settle, eligible, quote, loss_scenario
+from engine import seed, new_invoice, confirm, finance, settle, eligible, quote, loss_scenario, migrate_session
 
 
 class WorkflowTests(unittest.TestCase):
     def args(self):
-        return dict(seller='PME Test', siren='987654321', buyer='Client Test', reference='TEST-001',
+        return dict(seller='SME Test', siren='987654321', buyer='Client Test', reference='TEST-001',
                     amount=10000, issued=date.today(), due=date.today()+timedelta(days=60),
-                    documents=True, identity=True, strength='Solide', history='Ponctuel')
+                    documents=True, identity=True, strength='Strong', history='On time')
+
+    def test_existing_french_session(self):
+        i = new_invoice([], **self.args())
+        confirm(i, True)
+        i.update(strength='Solide', history='Ponctuel', buyer_status='Confirmée',
+                 status='Validée', note='Customer comment to preserve')
+        before = {k: i[k] for k in ('id', 'amount', 'reference', 'record_hash', 'note')}
+        migrate_session([i])
+        self.assertTrue(eligible(i))
+        self.assertEqual(i['buyer_status'], 'Confirmed')
+        self.assertEqual(before, {k: i[k] for k in before})
+        snapshot = i.copy()
+        migrate_session([i])
+        self.assertEqual(i, snapshot)
 
     def test_complete_workflow(self):
         i = new_invoice([], **self.args())
@@ -21,11 +35,11 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             finance(i, 4, False, 80)
         with self.assertRaises(ValueError):
-            confirm(i, False, 'Litige')
-        settle(i, 'Retard')
-        self.assertEqual(i['status'], 'Financée')
-        settle(i, 'Payée')
-        self.assertEqual(i['status'], 'Clôturée')
+            confirm(i, False, 'Dispute')
+        settle(i, 'Late payment')
+        self.assertEqual(i['status'], 'Financed')
+        settle(i, 'Paid')
+        self.assertEqual(i['status'], 'Closed')
 
     def test_duplicate_reference_and_file(self):
         args = self.args()
@@ -38,11 +52,11 @@ class WorkflowTests(unittest.TestCase):
             new_invoice([i], **args, file_bytes=b'example')
 
     def test_block_missing_checks_and_low_score(self):
-        for field, value in [('identity', False), ('documents', False), ('strength', 'Fragile')]:
+        for field, value in [('identity', False), ('documents', False), ('strength', 'Weak')]:
             args = self.args()
             args[field] = value
             if field == 'strength':
-                args['history'] = 'Retards fréquents'
+                args['history'] = 'Frequent delays'
             i = new_invoice([], **args)
             confirm(i, True)
             self.assertFalse(eligible(i))
@@ -55,7 +69,7 @@ class WorkflowTests(unittest.TestCase):
         i = new_invoice([], **self.args())
         with self.assertRaises(ValueError):
             confirm(i, False)
-        confirm(i, False, 'Livraison contestée')
+        confirm(i, False, 'Delivery disputed')
         self.assertFalse(eligible(i))
 
     def test_money_and_losses(self):

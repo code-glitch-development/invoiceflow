@@ -1,8 +1,8 @@
-# Vérifications du livrable
+# Validation
 
-- Six tests des règles métier exécutés et réussis : calculs, détection des doublons, préconditions, contestation et cycle de financement/règlement.
-- Compilation Python de l’application et des modules réussie.
-- Deux tests d’interface Streamlit fournis mais non exécutés : Streamlit absent de l’environnement de création, installation indisponible depuis les index de paquets testés.
-- Aucun déploiement public réalisé.
+- Seven business-rule tests passed: calculations, duplicate detection, eligibility, disputes, financing/payment lifecycle and migration of existing French sessions.
+- Python compilation of the application and modules passed.
+- Two Streamlit integration tests are included but were skipped because Streamlit is unavailable in the creation environment.
+- No live deployment or browser validation was performed.
 
-Après installation des dépendances, lancez `python -m unittest -v` depuis le dossier du projet pour exécuter aussi les tests d’interface.
+After installing dependencies, run `python -m unittest -v` from the project folder to execute the integration tests as well.
