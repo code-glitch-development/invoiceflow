@@ -48,7 +48,7 @@ class InterfaceTests(unittest.TestCase):
         at.sidebar.radio(key='language').set_value('FR').run()
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['investor_selection'], identifiers)
-        self.assertTrue(any('Groupe Horizon' in str(df.value) for df in at.dataframe))
+        self.assertTrue(any(df.value.astype(str).eq('Groupe Horizon').to_numpy().any() for df in at.dataframe))
         at.number_input(key='inv_budget').set_value(25000.0).run()
         at.button(key='review_selection').click().run()
         self.assertFalse(at.exception)

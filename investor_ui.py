@@ -39,6 +39,8 @@ def open_dossier(entry, navigate):
     st.session_state[prefix + 'pd_mode'] = 'Internal fictional cohort'
     st.session_state[prefix + 'cohort_group'] = report['assumptions']['pd_cohort']['group']
     st.session_state.ui_pricing_method = 'Risk-based pricing'
+    st.session_state.ui_with_recourse_to_the_sme = False
+    st.session_state.ui_hypothetical_insolvency_coverage_of_face_value = 0
     navigate('Investor', 'Financing', invoice)
 
 
@@ -228,6 +230,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
                              ' → ' + euro(entry['invoice']['amount']) + ' · ' + entry['report']['expected_payment_on'])
                 st.write(t('Total capital') + ' · **' + euro(review['advance']) + '**')
                 st.write(t('Full-payment proceeds') + ' · **' + euro(review['repayment']) + '**')
+                st.caption(t('Selection terms: no SME recourse and no hypothetical insurance coverage.'))
                 st.caption(t('This records simulated financing only. No money is transferred. Full-payment proceeds are not guaranteed.'))
                 if st.button(t('Confirm financing simulation'), key='confirm_selection', type='primary'):
                     try:

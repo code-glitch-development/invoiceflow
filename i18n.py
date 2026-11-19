@@ -1089,6 +1089,9 @@ FR.update({'Opportunities': 'Opportunités',
                                                                         'clients.'})
 
 
+FR.update({'Selection terms: no SME recourse and no hypothetical insurance coverage.': 'Conditions de la sélection : sans recours contre la PME et sans couverture d’assurance hypothétique.'})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language
