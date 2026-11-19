@@ -9,6 +9,24 @@ from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions
                            filtered, review_selection, review_fingerprint)
 
 
+# These are the existing fictional scenarios, not PD thresholds or credit ratings.
+RISK_COLORS = {
+    'Prudent': ('Lower simulated risk', '#166534', '#dcfce7'),
+    'Central': ('Moderate simulated risk', '#92400e', '#fef3c7'),
+    'Stressed': ('Higher simulated risk', '#991b1b', '#fee2e2'),
+}
+
+
+def risk_label(scenario, t):
+    return t(RISK_COLORS[scenario][0]) + ' · ' + t(scenario)
+
+
+def risk_badge(scenario, t):
+    _, foreground, background = RISK_COLORS[scenario]
+    return ('<span class="offer-scenario" style="color:' + foreground + ';background:' + background +
+            '">' + escape(risk_label(scenario, t)) + '</span>')
+
+
 def reset_filters():
     st.session_state.inv_budget = 25000.0
     st.session_state.inv_horizon = 90
@@ -86,18 +104,23 @@ def comparison(chosen, portfolio, budget, t, euro):
     if not chosen:
         st.info(t('Select up to three invoices to compare them.'))
         return
-    criteria = ['Buyer', 'Capital to advance', 'Payment horizon', 'Annual continuous rate (%)',
+    criteria = ['Buyer', 'Simulated risk level', 'Capital to advance', 'Payment horizon', 'Annual continuous rate (%)',
                 'One-year buyer probability of default (%)', 'Nominal LGD before time discount (%)',
                 'Full-payment proceeds', 'Potential gross gain', 'Existing buyer exposure']
     data = {t('Criterion'): [t(label) for label in criteria]}
     for entry in chosen:
         i, r = entry['invoice'], entry['report']
-        data[i['reference'] + ' · ' + i['id']] = [i['buyer'], euro(r['advance']),
+        data[i['reference'] + ' · ' + i['id']] = [i['buyer'], risk_label(entry['scenario'], t), euro(r['advance']),
             t('{days} days', days=r['horizon_days']), f"{r['annual_rate_percent']:.2f}",
             f"{r['assumptions']['annual_pd_percent']:.2f}", f"{r['assumptions']['lgd_percent']:.1f}",
             euro(i['amount']), euro(r['gross_discount']),
             euro(buyer_outstanding_capital(portfolio, i['buyer'])['outstanding_capital'])]
-    st.dataframe(pd.DataFrame(data), hide_index=True, use_container_width=True)
+    frame = pd.DataFrame(data)
+    styles = {risk_label(scenario, t): f'color: {foreground}; background-color: {background}; font-weight: 600'
+              for scenario, (_, foreground, background) in RISK_COLORS.items()}
+    styled = frame.style.apply(lambda column: column.map(lambda value: styles.get(value, '')),
+                               subset=pd.IndexSlice[[1], frame.columns[1:]])
+    st.dataframe(styled, hide_index=True, use_container_width=True)
     # Sum selected advances by debtor, including multiple invoices for one debtor.
     grouped = {}
     for entry in chosen:
@@ -120,12 +143,16 @@ def render_investor(page, invoices, database, t, euro, navigate):
     [class*="st-key-offer_"] {background:white;border:1px solid #dce4ed;border-radius:16px;padding:20px}
     .offer-amount {font-size:1.85rem;font-weight:650;color:#13253c;margin:.6rem 0}
     .offer-buyer {color:#64748b;font-size:.9rem;margin-bottom:12px}
-    .offer-scenario {border-radius:20px;padding:4px 10px;background:#eaf0f5;font-size:.8rem;display:inline-block}
+    .offer-scenario {border-radius:20px;padding:5px 10px;font-size:.8rem;font-weight:600;display:inline-block}
+    .risk-legend {display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
     </style>''', unsafe_allow_html=True)
     st.markdown('<span class="investor-badge">' + escape(t('SIMULATION · FICTIONAL DATA')) + '</span>', unsafe_allow_html=True)
     st.title(t('Choose your next financing opportunities') if page == 'Overview' else t('Compare your selection'))
     st.caption(t('Compare capital, payment horizons and scenarios before simulating an investment.'))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
+    st.markdown('<div class="risk-legend" aria-label="' + escape(t('Simulated risk level')) + '">' +
+                ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
+    st.caption(t('Colours describe the selected fictional scenario, not a verified credit rating.'))
     saved_filters = st.session_state.get('investor_filters', {})
     for key, default in dict(inv_budget=25000.0, inv_horizon=90, inv_scenario='All').items():
         st.session_state.setdefault(key, saved_filters.get(key, default))
@@ -168,7 +195,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
                     st.caption('✓ ' + t('Selected'))
                 st.markdown('<h3>' + escape(invoice['seller']) + '</h3>', unsafe_allow_html=True)
                 st.markdown('<div class="offer-buyer">' + escape(t('Buyer')) + ' · ' + escape(invoice['buyer']) + '</div>' +
-                    '<span class="offer-scenario">' + escape(t(entry['scenario'])) + '</span>' +
+                    risk_badge(entry['scenario'], t) +
                     '<div class="offer-amount">' + escape(euro(report['advance'])) + '</div>', unsafe_allow_html=True)
                 st.caption(t('Capital to advance'))
                 st.write(t('Payment horizon') + ' · ' + t('{days} days', days=report['horizon_days']))

@@ -1098,6 +1098,15 @@ FR.update({
 })
 
 
+FR.update({
+    'Lower simulated risk': 'Risque simulé faible',
+    'Moderate simulated risk': 'Risque simulé modéré',
+    'Higher simulated risk': 'Risque simulé élevé',
+    'Simulated risk level': 'Niveau de risque simulé',
+    'Colours describe the selected fictional scenario, not a verified credit rating.': 'Les couleurs représentent le scénario fictif sélectionné, sans notation de crédit vérifiée.',
+})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language
