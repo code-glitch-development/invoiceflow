@@ -12,6 +12,8 @@ from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
 from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
+from investor_ui import render_investor
+from opportunities import extra_examples
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
 t = Translator(language).text
@@ -21,6 +23,7 @@ try:
     initial = st.session_state.get('invoices')
     if initial is None:
         initial = seed()
+        initial += extra_examples(initial)
     migrate_session(initial)
     database.initialize(initial)
     invoices = database.load()
@@ -211,7 +214,7 @@ with st.sidebar:
     profile = st.selectbox(t('Demo role'), ['SME', 'Buyer', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Buyer', 'Investor']), on_change=change_workspace)
     workspace = WORKSPACES[profile]
     pages = workspace['pages']
-    page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=t, index=selected_index('ui_navigation', pages))
+    page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
     st.divider()
     st.caption(t('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.'))
     with st.expander(t('Reset demo')):
@@ -224,14 +227,17 @@ with st.sidebar:
                 st.rerun()
             except StorageError as exc:
                 st.error(t(str(exc)))
-st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
+if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions']):
+    st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
             '</div><h1>' + t(workspace['headline']) + '</h1><p>' +
             t(workspace['description']) + '</p></div>', unsafe_allow_html=True)
 st.caption(t('{profile} workspace · Roles are interchangeable for the demo. Saved invoices are shared across visitors on this server; there is no authentication.', profile=t(profile)))
 st.caption(t('Changes are saved automatically. Closing your browser does not delete saved invoices.'))
 if 'notice' in st.session_state:
     st.success(st.session_state.pop('notice'))
-if page == 'Overview':
+if profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions']:
+    render_investor(page, invoices, database, t, euro, navigate)
+elif page == 'Overview':
     metrics, actionable = overview(profile, invoices)
     for column, (label, value, monetary) in zip(st.columns(3), metrics):
         column.metric(t(label), euro(value) if monetary else value)

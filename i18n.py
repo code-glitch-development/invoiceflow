@@ -901,6 +901,194 @@ FR.update({
 })
 
 
+FR.update({'Opportunities': 'Opportunités',
+ 'Compare opportunities': 'Comparateur',
+ 'Simulation assumptions': 'Hypothèses de simulation',
+ 'Choose your next financing opportunities': 'Choisissez vos prochains financements',
+ 'SIMULATION · FICTIONAL DATA': 'SIMULATION · DONNÉES FICTIVES',
+ 'Compare capital, payment horizons and scenarios before simulating an investment.': 'Comparez les '
+                                                                                     'montants, '
+                                                                                     'les durées '
+                                                                                     'et les '
+                                                                                     'scénarios '
+                                                                                     'avant de '
+                                                                                     'simuler un '
+                                                                                     'investissement.',
+ 'Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.': 'Financement '
+                                                                                                  'de '
+                                                                                                  'factures '
+                                                                                                  'entières. '
+                                                                                                  'Les '
+                                                                                                  'gains '
+                                                                                                  'bruts '
+                                                                                                  'supposent '
+                                                                                                  'un '
+                                                                                                  'paiement '
+                                                                                                  'intégral '
+                                                                                                  'et '
+                                                                                                  'sont '
+                                                                                                  'avant '
+                                                                                                  'frais '
+                                                                                                  '; '
+                                                                                                  'le '
+                                                                                                  'capital '
+                                                                                                  'est '
+                                                                                                  'exposé '
+                                                                                                  'à '
+                                                                                                  'une '
+                                                                                                  'perte.',
+ 'Total budget (€)': 'Budget total (€)',
+ 'Maximum payment horizon': 'Horizon de paiement maximal',
+ '{days} days': '{days} jours',
+ 'Scenario': 'Scénario',
+ 'Prudent': 'Prudent',
+ 'Central': 'Central',
+ 'Stressed': 'Dégradé',
+ 'Reset filters': 'Réinitialiser les filtres',
+ 'Available opportunities': 'Opportunités disponibles',
+ 'Filters apply to each offer. Your total selection must also fit the budget.': 'Les filtres '
+                                                                                's’appliquent à '
+                                                                                'chaque offre. La '
+                                                                                'sélection totale '
+                                                                                'doit aussi '
+                                                                                'respecter votre '
+                                                                                'budget.',
+ 'No offers match these filters. Increase the budget or horizon, or reset the filters.': 'Aucune '
+                                                                                         'offre ne '
+                                                                                         'correspond '
+                                                                                         'à ces '
+                                                                                         'filtres. '
+                                                                                         'Augmentez '
+                                                                                         'le '
+                                                                                         'budget '
+                                                                                         'ou la '
+                                                                                         'durée, '
+                                                                                         'ou '
+                                                                                         'réinitialisez '
+                                                                                         'les '
+                                                                                         'filtres.',
+ 'Compare': 'Comparer',
+ 'Selected': 'Sélectionnée',
+ 'Capital to advance': 'Capital à avancer',
+ 'Payment horizon': 'Horizon de paiement',
+ 'Expected payment': 'Paiement attendu',
+ 'Full-payment proceeds': 'Montant reçu si paiement intégral',
+ 'Potential gross gain': 'Gain brut potentiel',
+ 'Already exposed to this buyer': 'Déjà exposé à ce client',
+ 'View invoice details': 'Voir le dossier',
+ 'Demo data and unavailable offers': 'Données de démonstration et offres indisponibles',
+ 'Add two fictional eligible examples without replacing existing invoices.': 'Ajoutez deux '
+                                                                             'exemples fictifs '
+                                                                             'éligibles sans '
+                                                                             'remplacer les '
+                                                                             'factures existantes.',
+ 'Add investor examples': 'Ajouter les exemples investisseur',
+ 'Compare your selection': 'Comparez votre sélection',
+ 'Select up to three invoices to compare them.': 'Sélectionnez jusqu’à trois factures pour les '
+                                                 'comparer.',
+ 'Existing buyer exposure': 'Exposition actuelle au client',
+ 'Buyer exposure after selection': 'Exposition par client après sélection',
+ 'Exposure uses buyer names in this demo, not verified legal identifiers.': 'Cette démonstration '
+                                                                            'regroupe les '
+                                                                            'expositions par nom '
+                                                                            'de client, sans '
+                                                                            'identifiant juridique '
+                                                                            'vérifié.',
+ '{count} selected invoices are hidden by your filters.': '{count} facture(s) sélectionnée(s) sont '
+                                                          'masquées par vos filtres.',
+ 'Your selection': 'Votre sélection',
+ 'Total capital': 'Capital total',
+ 'Remaining budget': 'Budget restant',
+ 'The total advance exceeds your budget.': 'Le capital total dépasse votre budget.',
+ 'Simulate this selection': 'Simuler cette sélection',
+ 'Review before confirming': 'Vérifiez avant de confirmer',
+ 'This records simulated financing only. No money is transferred. Full-payment proceeds are not guaranteed.': 'Cette '
+                                                                                                              'action '
+                                                                                                              'enregistre '
+                                                                                                              'une '
+                                                                                                              'simulation '
+                                                                                                              'de '
+                                                                                                              'financement. '
+                                                                                                              'Aucun '
+                                                                                                              'transfert '
+                                                                                                              'd’argent. '
+                                                                                                              'Le '
+                                                                                                              'paiement '
+                                                                                                              'intégral '
+                                                                                                              'n’est '
+                                                                                                              'pas '
+                                                                                                              'garanti.',
+ 'Confirm financing simulation': 'Confirmer la simulation de financement',
+ 'Financing simulation saved. Follow payment in your portfolio.': 'Simulation de financement '
+                                                                  'enregistrée. Suivez le paiement '
+                                                                  'dans votre portefeuille.',
+ 'Unavailable invoices were removed from your selection.': 'Les factures devenues indisponibles '
+                                                           'ont été retirées de votre sélection.',
+ 'The selection changed. Review the latest offers before confirming.': 'La sélection a changé. '
+                                                                       'Vérifiez les offres '
+                                                                       'actualisées avant de '
+                                                                       'confirmer.',
+ 'Enter a positive budget.': 'Saisissez un budget positif.',
+ 'Select between one and three different invoices.': 'Sélectionnez entre une et trois factures '
+                                                     'différentes.',
+ 'Fictional borrower scenarios, not client credit ratings. The same buyer uses the same scenario across all opportunity cards.': 'Scénarios '
+                                                                                                                                 'd’emprunteurs '
+                                                                                                                                 'fictifs, '
+                                                                                                                                 'sans '
+                                                                                                                                 'notation '
+                                                                                                                                 'de '
+                                                                                                                                 'crédit '
+                                                                                                                                 'réelle. '
+                                                                                                                                 'Un '
+                                                                                                                                 'même '
+                                                                                                                                 'client '
+                                                                                                                                 'conserve '
+                                                                                                                                 'le '
+                                                                                                                                 'même '
+                                                                                                                                 'scénario '
+                                                                                                                                 'sur '
+                                                                                                                                 'toutes '
+                                                                                                                                 'les '
+                                                                                                                                 'cartes '
+                                                                                                                                 'd’opportunités.',
+ 'PD comes from a separate fixed annual fictional cohort; adding invoice transactions does not dilute it.': 'La '
+                                                                                                            'PD '
+                                                                                                            'provient '
+                                                                                                            'd’une '
+                                                                                                            'cohorte '
+                                                                                                            'annuelle '
+                                                                                                            'fictive '
+                                                                                                            'fixe '
+                                                                                                            'et '
+                                                                                                            'distincte '
+                                                                                                            '; '
+                                                                                                            'ajouter '
+                                                                                                            'des '
+                                                                                                            'transactions '
+                                                                                                            'ne '
+                                                                                                            'la '
+                                                                                                            'dilue '
+                                                                                                            'pas.',
+ 'Changes reprice available opportunities only. Confirmed financing keeps its original assumptions.': 'Les '
+                                                                                                      'modifications '
+                                                                                                      'recalculent '
+                                                                                                      'les '
+                                                                                                      'opportunités '
+                                                                                                      'disponibles. '
+                                                                                                      'Les '
+                                                                                                      'financements '
+                                                                                                      'confirmés '
+                                                                                                      'conservent '
+                                                                                                      'leurs '
+                                                                                                      'hypothèses '
+                                                                                                      'initiales.',
+ 'Annual continuous rate (%)': 'Taux annuel continu (%)',
+ 'Fictional annual PD: {pd}% · {defaults} defaults / {buyers} buyers.': 'PD annuelle fictive : '
+                                                                        '{pd} % · {defaults} '
+                                                                        'défaut(s) / {buyers} '
+                                                                        'clients.'})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

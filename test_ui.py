@@ -32,6 +32,75 @@ class InterfaceTests(unittest.TestCase):
                     at.sidebar.radio(key='language').set_value(language).run()
                     self.assertFalse(at.exception, (language, profile, page, list(at.exception)))
 
+    def test_opportunity_selection_survives_filters_language_and_comparison(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        identifiers = [i['id'] for i in at.session_state['invoices'] if i['reference'] in
+                       ('NOV-2026-041', 'DEMO-INVEST-ATLAS')]
+        for identifier in identifiers:
+            at.checkbox(key='compare_' + identifier).check().run()
+        self.assertEqual(at.session_state['investor_selection'], identifiers)
+        at.number_input(key='inv_budget').set_value(10000.0).run()
+        self.assertEqual(at.session_state['investor_selection'], identifiers)
+        self.assertTrue(at.button(key='review_selection').disabled)
+        self.assertTrue(any('hidden by your filters' in info.value for info in at.info))
+        at.sidebar.radio(key='ui_navigation').set_value('Compare opportunities').run()
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.session_state['investor_selection'], identifiers)
+        self.assertTrue(any('Groupe Horizon' in str(df.value) for df in at.dataframe))
+        at.number_input(key='inv_budget').set_value(25000.0).run()
+        at.button(key='review_selection').click().run()
+        self.assertFalse(at.exception)
+        self.assertFalse(at.button(key='confirm_selection').disabled)
+
+    def test_opportunity_review_invalidates_on_budget_or_assumption_change(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        identifier = at.session_state['invoices'][0]['id']
+        at.checkbox(key='compare_' + identifier).check().run()
+        at.button(key='review_selection').click().run()
+        at.number_input(key='inv_budget').set_value(30000.0).run()
+        self.assertFalse(at.exception)
+        self.assertNotIn('confirm_selection', [b.key for b in at.button])
+        at.button(key='review_selection').click().run()
+        at.sidebar.radio(key='ui_navigation').set_value('Simulation assumptions').run()
+        at.number_input(key='investor_cost_lgd_percent').set_value(80.0).run()
+        at.sidebar.radio(key='ui_navigation').set_value('Overview').run()
+        self.assertFalse(at.exception)
+        self.assertNotIn('confirm_selection', [b.key for b in at.button])
+
+    def test_opportunity_batch_confirm_saves_exact_review(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        identifiers = [c.key.removeprefix('compare_') for c in at.checkbox if c.key.startswith('compare_')]
+        self.assertEqual(len(identifiers), 3)
+        for identifier in identifiers:
+            at.checkbox(key='compare_' + identifier).check().run()
+        at.button(key='review_selection').click().run()
+        review = at.session_state['investor_review']
+        at.button(key='confirm_selection').click().run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Portfolio')
+        saved = {i['id']: i for i in at.session_state['invoices']}
+        for entry in review['rows']:
+            actual = saved[entry['invoice']['id']]
+            self.assertEqual(actual['status'], 'Financed')
+            self.assertEqual(actual['financing']['advance'], entry['report']['advance'])
+            self.assertEqual(actual['financing']['pricing']['snapshot_hash'], entry['report']['snapshot_hash'])
+
+    def test_open_dossier_preserves_card_quote(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        invoice = next(i for i in at.session_state['invoices'] if i['reference'] == 'DEMO-INVEST-ATLAS')
+        from opportunities import opportunities
+        expected = next(e['report'] for e in opportunities(at.session_state['invoices']) if e['invoice']['id'] == invoice['id'])
+        at.button(key='dossier_' + invoice['id']).click().run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Financing')
+        metric = next(m.value for m in at.metric if m.label == 'Model maximum advance')
+        self.assertEqual(metric, f"€{expected['advance']:,.2f}")
+
     def test_upload_prefills_editable_fields_and_saves_corrections(self):
         from io import BytesIO
         from test_extraction import text_pdf
@@ -91,7 +160,11 @@ class InterfaceTests(unittest.TestCase):
                 self.assertFalse(at.exception)
                 self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Overview')
                 self.assertEqual(at.sidebar.radio(key='ui_navigation').options,
-                                 [translate(p) for p in WORKSPACES[role]['pages']])
+                                 [translate('Opportunities') if role == 'Investor' and p == 'Overview' else translate(p) for p in WORKSPACES[role]['pages']])
+                if role == 'Investor':
+                    self.assertTrue(any(translate('Choose your next financing opportunities') in h.value for h in at.title))
+                    self.assertEqual(at.session_state['invoices'], records)
+                    continue
                 expected, items = overview(role, records)
                 self.assertEqual([m.label for m in at.metric], [translate(m[0]) for m in expected])
                 self.assertTrue(any(translate(WORKSPACES[role]['headline']) in m.value for m in at.markdown))

@@ -146,3 +146,27 @@ python -m unittest -v
 - `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 
+
+### Investor opportunity workspace
+
+The Investor home shows eligible invoices as cards with model-priced advances,
+expected payment dates, and gross gains conditional on full payment, before costs.
+Filter by total budget, expected payment horizon (including the assumed delay),
+and fictional borrower scenario. Select up to three whole invoices; filtered-out
+selections remain in the comparator and count toward the total budget.
+
+The comparator and selection summary show aggregate capital and exposure by
+buyer name. `Simulation assumptions` sets a common scenario per buyer and shared
+pricing costs. These scenarios use the existing fictional annual cohorts, not
+calibrated client ratings. Adding transactions cannot dilute their annual PD.
+The detailed financing and simulator screens remain accessible.
+
+`Simulate this selection` opens a review. Confirmation rechecks invoice versions,
+eligibility, current quotes, and the aggregate budget inside one database
+transaction. Either the entire selection is recorded or none is. Changes to
+quotes, budget, selection, or the shared portfolio invalidate the review. No
+money is transferred. Existing financed invoices retain their saved pricing.
+
+New workspaces include two extra fictional eligible invoices. For an existing
+database, use `Add investor examples` under `Demo data and unavailable offers`;
+this appends missing examples without replacing existing records.

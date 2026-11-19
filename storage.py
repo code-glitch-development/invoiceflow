@@ -80,3 +80,42 @@ class InvoiceStore:
             db.execute('DELETE FROM invoices')
             for invoice in invoices:
                 self._insert(db, invoice)
+
+    def finance_selection(self, review):
+        """Recheck the reviewed portfolio and fund the whole batch atomically."""
+        from opportunities import review_selection
+        from engine import finance_with_risk_pricing
+        from risk_pricing import price_invoice
+        with self.transaction() as db:
+            rows = db.execute('SELECT payload, version FROM invoices ORDER BY rowid').fetchall()
+            latest = [dict(json.loads(payload), _version=version) for payload, version in rows]
+            if {i['id']: i['_version'] for i in latest} != review['versions']:
+                raise StorageError('The selection changed. Review the latest offers before confirming.')
+            by_id = {i['id']: i for i in latest}
+            repriced = []
+            for entry in review['rows']:
+                invoice = by_id[entry['invoice']['id']]
+                report = price_invoice(invoice, entry['report']['assumptions'])
+                if report['snapshot_hash'] != entry['report']['snapshot_hash']:
+                    raise StorageError('The selection changed. Review the latest offers before confirming.')
+                repriced.append(dict(invoice=invoice, report=report, scenario=entry['scenario']))
+            checked = review_selection(repriced, [e['invoice']['id'] for e in repriced], review['budget'], latest)
+            saved = []
+            for entry in checked['rows']:
+                invoice = entry['invoice']
+                finance_with_risk_pricing(invoice, entry['report']['assumptions'], False, 0)
+                result = db.execute('UPDATE invoices SET payload = ?, version = version + 1 WHERE id = ? AND version = ?',
+                    (self.payload(invoice), invoice['id'], invoice['_version']))
+                if result.rowcount != 1:
+                    raise StorageError('The selection changed. Review the latest offers before confirming.')
+                saved.append(dict(invoice, _version=invoice['_version'] + 1))
+        return saved
+
+    def add_examples(self):
+        from opportunities import extra_examples
+        with self.transaction() as db:
+            existing = [json.loads(row[0]) for row in db.execute('SELECT payload FROM invoices')]
+            additions = extra_examples(existing)
+            for invoice in additions:
+                self._insert(db, invoice)
+        return len(additions)
