@@ -13,6 +13,7 @@ def reset_filters():
     st.session_state.inv_budget = 25000.0
     st.session_state.inv_horizon = 90
     st.session_state.inv_scenario = 'All'
+    st.session_state.investor_filters = dict(inv_budget=25000.0, inv_horizon=90, inv_scenario='All')
 
 
 def toggle_selection(identifier):
@@ -125,9 +126,9 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.title(t('Choose your next financing opportunities') if page == 'Overview' else t('Compare your selection'))
     st.caption(t('Compare capital, payment horizons and scenarios before simulating an investment.'))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
-    st.session_state.setdefault('inv_budget', 25000.0)
-    st.session_state.setdefault('inv_horizon', 90)
-    st.session_state.setdefault('inv_scenario', 'All')
+    saved_filters = st.session_state.get('investor_filters', {})
+    for key, default in dict(inv_budget=25000.0, inv_horizon=90, inv_scenario='All').items():
+        st.session_state.setdefault(key, saved_filters.get(key, default))
     with st.container(border=True):
         a, b, c, d = st.columns([1.2, 1.1, 1, 1])
         budget = a.number_input(t('Total budget (€)'), min_value=1.0, max_value=1000000000.0, step=1000.0, key='inv_budget')
@@ -135,6 +136,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
             format_func=lambda days: t('{days} days', days=days), key='inv_horizon')
         scenario = c.selectbox(t('Scenario'), ['All'] + list(SCENARIOS), format_func=t, key='inv_scenario')
         d.button(t('Reset filters'), on_click=reset_filters, use_container_width=True)
+    st.session_state.investor_filters = dict(inv_budget=budget, inv_horizon=horizon, inv_scenario=scenario)
     entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs'))
     available = {e['invoice']['id']: e for e in entries if e['report']['acceptable']}
     previous = st.session_state.get('investor_selection', [])
