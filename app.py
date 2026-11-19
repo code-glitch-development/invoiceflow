@@ -383,7 +383,7 @@ elif page == 'Financing':
             recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
             coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
             if method == 'Risk-based pricing':
-                report = pricing_controls(i, t, euro)
+                report = pricing_controls(i, t, euro, invoices)
                 ready = bool(report and report['acceptable'])
             else:
                 st.info(t('Manual demonstration: the fee and annual rate are independent assumptions, not a risk-based price.'))

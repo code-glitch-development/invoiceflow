@@ -658,6 +658,35 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
 
 
 FR.update({
+    'Existing unpaid capital for this buyer': 'Capital impayé déjà exposé à ce client',
+    'Buyer capital after proposed advance': 'Capital exposé au client après l’avance proposée',
+    'Transaction volume does not dilute borrower PD. More unpaid capital increases exposure. This preview uses demo buyer names, not verified company identifiers or an exposure limit.':
+        'Le volume de transactions ne dilue pas la probabilité de défaut du client. Un capital impayé plus élevé augmente l’exposition. Cet aperçu utilise les noms des clients fictifs, sans identifiant d’entreprise vérifié ni limite d’encours.',
+    'This is a fixed-cohort reference frequency, not an individual client PD. Adding transactions cannot lower it; a client deterioration requires a separate reassessment.':
+        'Ce taux de référence porte sur une cohorte fixe, pas sur un client individuel. Ajouter des transactions ne le fait pas baisser ; une dégradation du client nécessite une réévaluation distincte.',
+    'PD estimation mode': 'Mode d’estimation de la probabilité de défaut',
+    'Internal fictional cohort': 'Cohorte interne fictive',
+    'Manual PD inputs': 'Probabilité de défaut saisie manuellement',
+    'Fictional annual borrower cohort': 'Groupe annuel fictif de clients',
+    'All simulated buyers': 'Tous les clients simulés',
+    'Simulated on-time buyers': 'Clients simulés payant à l’heure',
+    'Simulated occasionally late buyers': 'Clients simulés avec retards occasionnels',
+    'Simulated frequently late buyers': 'Clients simulés avec retards fréquents',
+    'Fictional buyers observed for one year': 'Clients fictifs suivis sur un an',
+    'Fictional buyers with a default': 'Clients fictifs en défaut',
+    'Observed annual default rate (%)': 'Taux annuel de défaut observé (%)',
+    'Annual window: {start} to {end}. PD = {defaults} / {buyers} × 100.':
+        'Période annuelle : du {start} au {end}. Probabilité estimée = {defaults} / {buyers} × 100.',
+    'Invented annual cohort counts, not real payment history. Selecting a group is a demonstration scenario, not a calibrated client classification.':
+        'Effectifs et défauts annuels inventés, sans historique réel de paiement. Le choix du groupe est un scénario de démonstration, pas une classification de risque calibrée.',
+    'Current invoice payment, lateness and dispute events do not modify this separate completed-year cohort.':
+        'Les paiements, retards et litiges des factures du parcours ne modifient pas cette cohorte annuelle distincte et clôturée.',
+    'Small fictional group: its observed rate is unstable and is not a reliable individual default probability.':
+        'Petit groupe fictif : son taux observé est instable et ne constitue pas une probabilité individuelle de défaut fiable.',
+    'Cohort counts must be whole numbers with 0 <= defaults <= buyers.':
+        'Les effectifs doivent être entiers, avec un nombre de défauts compris entre zéro et le nombre de clients.',
+    'Choose an available fictional borrower cohort.': 'Choisissez un groupe fictif de clients disponible.',
+    'The fictional cohort report is invalid or inconsistent.': 'Le rapport de cohorte fictive est invalide ou incohérent.',
     'Nominal LGD before time discount (%)': 'Perte nominale en cas de défaut, avant actualisation (%)',
     'The recovery lag is discounted separately. Do not enter an already-discounted LGD unchanged.':
         'Le délai de récupération est actualisé séparément. Ne saisissez pas telle quelle une perte en cas de défaut déjà actualisée.',

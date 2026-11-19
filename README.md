@@ -107,7 +107,9 @@ The mathematical convention is continuous compounding; see [OpenStax](https://op
 
 ## Risk-sensitive pricing
 
-Open **Investor → Financing**. The default mode requires one-year buyer PD, nominal LGD before time discounting, costs and data provenance. It does not invent PD from `Strong`, `On time` or the existing score. Fields start empty; a clearly marked button loads fictional assumptions for demonstrations. User-provided sources are recorded but not independently verified.
+Open **Investor → Financing**. Default risk pricing now starts with an **internal fictional annual cohort**: four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the demo score or declared payment-history dropdown does not automatically assign a buyer to a cohort.
+
+The screen shows numerator, denominator, annual period and data origin. PD and cohort provenance are read-only; costs and recovery assumptions remain adjustable. Cohort counts/version are checked on pricing and saved in the JSON report. Switching to manual PD inputs permits explicit alternative assumptions; missing inputs/source still block funding. No credit-data provider or external API is required for the default demonstration.
 
 The model scales one-year PD to the actual tenor using constant survival intensity, prices the maximum advance from expected discounted performing/default cash flows, and derives the annual continuous equivalent. It accounts separately for expected collection delay, recovery lag, upfront costs and effective annual funding/capital/margin budgets. Missing/old data and the configured rate limit can block an offer. Existing workflow requirements remain binding.
 
@@ -129,6 +131,7 @@ python -m unittest -v
 - `workspaces.py`: role navigation, overview metrics and actionable invoice queues.
 - `future_value.py`: continuous compounding, Actual/365 duration and payment-date stopping.
 - `risk_pricing.py`, `pricing_ui.py`: documented expected-cash-flow pricing and investor controls.
+- `demo_pd.py`: fictional completed-year borrower aggregates and observed default-rate calculation.
 - `PRICING_MODEL.md`: derivation, conventions, limitations and calibration requirements.
 - `i18n.py`: English/French presentation translations.
 - `storage.py`: transactional SQLite persistence.
@@ -139,6 +142,7 @@ python -m unittest -v
 - `test_workspaces.py`: role-specific metrics, queues, navigation and translation coverage.
 - `test_future_value.py`: percentage/year conversion, invalid inputs, no double compounding, legacy records and payment stopping. Storage and interface tests also cover saved interest settings and projections.
 - `test_risk_pricing.py`: horizon PD, cash-flow consistency, policy blocks, sensitivities, saved snapshots and prevention of double charging.
+- `test_demo_pd.py`: aggregate consistency, completed annual windows, fictional provenance and cohort validation.
 - `test_extraction.py`: native/scanned PDFs, PNG/JPEG OCR, ambiguity, invalid files, currency/date handling and preservation of manual corrections.
 - `VERIFICATION.md`: validation performed and limitations.
 

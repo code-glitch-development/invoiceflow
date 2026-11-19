@@ -19,6 +19,15 @@ def canonical(value):
     return ''.join(c for c in unicodedata.normalize('NFKD', value).casefold() if c.isalnum())
 
 
+def buyer_outstanding_capital(invoices, buyer):
+    """Current unpaid principal proxy, grouped by demo buyer name, not transaction count."""
+    key = canonical(buyer)
+    matching = [i for i in invoices if canonical(i['buyer']) == key and i.get('financing')
+                and i.get('status') == 'Financed' and i.get('outcome') != 'Paid']
+    return {'advance_count': len(matching),
+            'outstanding_capital': money(sum(i['financing']['advance'] for i in matching))}
+
+
 def quote(amount, rate):
     if amount <= 0 or not 0 <= rate < 100:
         raise ValueError('Invalid amount or rate.')

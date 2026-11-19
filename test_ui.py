@@ -151,20 +151,19 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(at.number_input(key='ui_simulation_years').value, .5)
         self.assertEqual(metric('Valeur future (simulation)'), f'{expected:,.2f}'.replace(',', ' ').replace('.', ',') + ' €')
 
-    def test_risk_pricing_needs_inputs_and_saves_a_locked_report(self):
+    def test_internal_cohort_saves_a_locked_report(self):
         from datetime import date
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
         at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
         self.assertEqual(at.radio(key='ui_pricing_method').value, 'Risk-based pricing')
-        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        self.assertFalse(at.button(key='ui_simulate_financing').disabled)
         invoice = at.session_state['invoices'][0]
         prefix = 'pricing_' + invoice['id'] + '_'
-        at.button(key=prefix+'example').click().run()
         self.assertFalse(at.exception)
         self.assertFalse(at.button(key='ui_simulate_financing').disabled)
         initial_rate = float(next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)'))
-        at.number_input(key=prefix+'annual_pd_percent').set_value(4.0).run()
+        at.selectbox(key=prefix+'cohort_group').set_value('Simulated occasionally late buyers').run()
         new_rate = float(next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)'))
         self.assertGreater(new_rate, initial_rate)
         at.button(key='ui_simulate_financing').click().run()
@@ -187,7 +186,7 @@ class InterfaceTests(unittest.TestCase):
         at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
         identity = at.session_state['invoices'][0]['id']
         prefix = 'pricing_' + identity + '_'
-        at.button(key=prefix+'example').click().run()
+        at.radio(key=prefix+'pd_mode').set_value('Manual PD inputs').run()
         at.date_input(key=prefix+'source_date').set_value(valuation_today()-timedelta(days=400)).run()
         self.assertFalse(at.exception)
         self.assertTrue(at.button(key='ui_simulate_financing').disabled)
@@ -202,13 +201,46 @@ class InterfaceTests(unittest.TestCase):
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
         at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
         prefix = 'pricing_' + at.session_state['invoices'][0]['id'] + '_'
-        at.button(key=prefix+'example').click().run()
         rate = next(m.value for m in at.metric if m.label == 'Calculated annual continuous rate (%)')
         at.sidebar.radio(key='language').set_value('FR').run()
         self.assertFalse(at.exception)
         self.assertEqual(at.number_input(key=prefix+'annual_pd_percent').value, 2)
         self.assertEqual(next(m.value for m in at.metric if m.label == 'Taux annuel continu calculé (%)'), rate)
         self.assertFalse(at.button(key='ui_simulate_financing').disabled)
+
+    def test_internal_cohort_is_explained_and_pd_is_read_only(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        prefix = 'pricing_' + at.session_state['invoices'][0]['id'] + '_'
+        self.assertEqual(at.radio(key=prefix+'pd_mode').value, 'Internal fictional cohort')
+        self.assertTrue(at.number_input(key=prefix+'annual_pd_percent').disabled)
+        self.assertTrue(at.selectbox(key=prefix+'data_origin').disabled)
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Fictional buyers observed for one year'),'200')
+        self.assertEqual(next(m.value for m in at.metric if m.label == 'Fictional buyers with a default'),'4')
+        self.assertTrue(any('Invented annual cohort counts' in w.value for w in at.warning))
+        self.assertTrue(any(m.label == 'Existing unpaid capital for this buyer' for m in at.metric))
+        at.selectbox(key=prefix+'cohort_group').set_value('Simulated frequently late buyers').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.number_input(key=prefix+'annual_pd_percent').value,10)
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.selectbox(key=prefix+'cohort_group').value, 'Simulated frequently late buyers')
+        self.assertEqual(at.number_input(key=prefix+'annual_pd_percent').value,10)
+
+    def test_manual_pd_still_requires_a_source(self):
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        prefix = 'pricing_' + at.session_state['invoices'][0]['id'] + '_'
+        at.radio(key=prefix+'pd_mode').set_value('Manual PD inputs').run()
+        at.text_input(key=prefix+'source').set_value('').run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.radio(key=prefix+'pd_mode').value,'Manual PD inputs')
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
 
     def test_portfolio_future_value_is_saved_projected_and_stopped_at_payment(self):
         from datetime import timedelta

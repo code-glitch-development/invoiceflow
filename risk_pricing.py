@@ -7,6 +7,7 @@ import json
 import math
 
 from future_value import round_value, valuation_today
+from demo_pd import verify_demo_cohort
 
 MODEL_VERSION = 'expected-cashflow-v1'
 ORIGINS = ['User-provided, unverified', 'Illustrative assumptions']
@@ -58,6 +59,9 @@ def normalize_assumptions(raw, as_of):
         raise ValueError('Risk-data observation date cannot be in the future.')
     values.update(data_origin=raw['data_origin'], source=str(raw['source']).strip()[:500],
                   source_date=observed.isoformat(), notes=str(raw.get('notes', '')).strip()[:2000])
+    if raw.get('pd_cohort') is not None:
+        values['pd_cohort'] = verify_demo_cohort(raw['pd_cohort'], values['annual_pd_percent'],
+                                                values['data_origin'], values['source_date'], as_of)
     return values
 
 
@@ -141,6 +145,9 @@ def stress_scenarios(invoice, assumptions, as_of=None):
     results = []
     for label, change in scenarios:
         altered = dict(deepcopy(assumptions), **change)
+        if change:
+            # Stress assumptions are hypothetical deviations, not observed cohort PDs.
+            altered.pop('pd_cohort', None)
         report = price_invoice(invoice, altered, as_of)
         npv = (evaluate_cashflows(invoice['amount'], base['advance'], report['days_to_due'],
                                   report['assumptions'])['expected_npv'] if base['advance'] else None)
