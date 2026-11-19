@@ -15,21 +15,30 @@ class InterfaceTests(unittest.TestCase):
     def test_all_screens(self):
         at = self.app()
         for profile in ['SME', 'Buyer', 'Investor']:
-            at.sidebar.selectbox[0].set_value(profile).run()
+            at.sidebar.selectbox(key='ui_demo_role').set_value(profile).run()
             for page in ['Overview', 'Upload an invoice', 'Buyer confirmation', 'Financing', 'Simulator', 'Portfolio']:
-                at.sidebar.radio[0].set_value(page).run()
-                self.assertFalse(at.exception, (profile, page, list(at.exception)))
+                at.sidebar.radio(key='ui_navigation').set_value(page).run()
+                for language in ['FR', 'EN']:
+                    at.sidebar.radio(key='language').set_value(language).run()
+                    self.assertFalse(at.exception, (language, profile, page, list(at.exception)))
 
     def test_financing_and_payment(self):
         at = self.app()
-        at.sidebar.selectbox[0].set_value('Investor').run()
-        at.sidebar.radio[0].set_value('Financing').run()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
         button = next(b for b in at.button if b.label == 'Simulate financing')
         self.assertFalse(button.disabled)
         button.click().run()
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['invoices'][0]['status'], 'Financed')
-        at.sidebar.radio[0].set_value('Portfolio').run()
+        before = [dict(i) for i in at.session_state['invoices']]
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.session_state['invoices'], before)
+        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'Investor')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Financing')
+        at.sidebar.radio(key='language').set_value('EN').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
         next(b for b in at.button if b.label == 'Save tracking update').click().run()
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['invoices'][0]['status'], 'Closed')

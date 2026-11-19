@@ -1,6 +1,6 @@
 # InvoiceFlow ↗
 
-An English-language Streamlit demo for invoice financing and reverse factoring, based on the supplied InvoiceFlow concept. All companies and transactions are fictional. No money is transferred.
+A bilingual English/French Streamlit demo for invoice financing and reverse factoring, based on the supplied InvoiceFlow concept. All companies and transactions are fictional. No money is transferred.
 
 ## Run locally
 
@@ -21,6 +21,17 @@ python -m streamlit run app.py
 ```
 
 Open the address shown in the terminal, usually http://localhost:8501. No API key is required.
+
+## Language / Langue
+
+Use the **EN / FR** selector at the top of the sidebar to switch language instantly.
+Menus, forms, messages, table headers and displayed statuses follow the selection.
+Invoice records and financing values are preserved; internal identifiers remain in English.
+CSV exports follow the selected language. JSON exports retain the canonical data for portability.
+The choice is kept for the current browser session. Submitted data is retained when switching languages; submit an open form before switching to preserve any draft edits.
+
+Utilisez le sélecteur **EN / FR** en haut de la barre latérale pour changer de langue.
+Les factures et leurs financements sont conservés. Validez un formulaire ouvert avant de changer de langue pour conserver les modifications non envoyées.
 
 ## Three-minute demo
 
@@ -59,13 +70,14 @@ Select the GitHub repository, the `main` branch and `app.py` as the main file. N
 python -m unittest -v
 ```
 
-`test_engine.py` covers calculations, duplicates, eligibility, disputes, the financing/payment lifecycle and migration of existing French sessions. `test_ui.py` covers the screens and investor workflow using the Streamlit test runner.
+`test_engine.py` covers calculations, duplicates, eligibility, disputes, the financing/payment lifecycle and migration of existing French sessions. `test_i18n.py` checks translation templates, localized exports and preservation of business values. `test_ui.py` covers both languages, all screens and language switching during the investor workflow using the Streamlit test runner.
 
 ## Files
 
 - `app.py`: Streamlit interface and workflows.
+- `i18n.py`: English/French presentation translations.
 - `engine.py`: business rules, calculations, sample data and session migration.
 - `requirements.txt`: dependencies.
 - `.streamlit/config.toml`: theme and upload limit.
-- `test_engine.py`, `test_ui.py`: automated tests.
+- `test_engine.py`, `test_i18n.py`, `test_ui.py`: automated tests.
 - `VERIFICATION.md`: validation performed and limitations.
