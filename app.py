@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from storage import InvoiceStore, StorageError
+from startup_cleanup import remove_auto_supplier_batch
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
@@ -32,7 +33,7 @@ try:
     migrate_session(initial)
     database.initialize(initial)
     database.remove_builtin_demo_invoices()
-    database.remove_auto_supplier_batch()
+    remove_auto_supplier_batch(database)
     invoices = database.load()
     st.session_state.invoices = invoices
 except StorageError as exc:

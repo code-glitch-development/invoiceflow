@@ -6,6 +6,7 @@ import unittest
 from demo_catalog import catalog_examples
 from engine import seed
 from storage import InvoiceStore
+from startup_cleanup import remove_auto_supplier_batch
 
 
 class DemoCleanupTests(unittest.TestCase):
@@ -66,6 +67,17 @@ class DemoCleanupTests(unittest.TestCase):
         self.assertEqual(self.store.load(), expected)
         self.assertEqual(self.store.remove_auto_supplier_batch(), 0)
         self.assertEqual(self.store.load(), expected)
+
+    def test_startup_cleanup_supports_legacy_storage_class_without_new_method(self):
+        from types import SimpleNamespace
+        invoice = self.samples()[0]
+        invoice['demo_source'] = 'requested-ten-suppliers-v1'
+        self.store.initialize([invoice])
+        legacy = SimpleNamespace(transaction=self.store.transaction)
+        self.assertFalse(hasattr(legacy, 'remove_auto_supplier_batch'))
+        self.assertEqual(remove_auto_supplier_batch(legacy), 1)
+        self.assertEqual(self.store.load(), [])
+        self.assertEqual(remove_auto_supplier_batch(legacy), 0)
 
 
 if __name__ == '__main__':

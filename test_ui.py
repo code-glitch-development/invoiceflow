@@ -76,6 +76,13 @@ class InterfaceTests(unittest.TestCase):
             at.run()
             self.assertEqual(at.session_state['invoices'], [before])
 
+    def test_startup_does_not_require_new_method_on_cached_storage_class(self):
+        from storage import InvoiceStore
+        with patch.object(InvoiceStore, 'remove_auto_supplier_batch', new=None):
+            at = self.app()
+            self.assertFalse(at.exception)
+            self.assertTrue(at.session_state['invoices'])
+
     def test_all_screens(self):
         from workspaces import WORKSPACES
         at = self.app()
