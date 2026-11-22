@@ -43,7 +43,7 @@ The demo role selector opens a distinct workspace and returns to its overview:
 
 Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
 
-1. Open **SME → Overview**. New workspaces start empty; upload or enter your own invoice to begin.
+1. Open **SME → Overview**. The requested batch provides ten clearly labelled fictional suppliers; you can also upload or enter your own invoice.
 2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**, and tick both simulated checks.
 3. Select **Buyer → Buyer confirmation**. Choose the buyer and invoice, check the confirmation box and save. You can also dispute an invoice with a reason.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
@@ -87,7 +87,7 @@ Select the GitHub repository, the `main` branch and `app.py` as the main file. N
 
 Default location: `data/invoiceflow.db`, relative to `app.py`. It is created automatically on first launch. Set the `INVOICEFLOW_DB_PATH` environment variable to use another location. SQLite is included with Python; no extra dependency is required.
 
-An uninitialized database starts empty. Existing records are loaded on every rerun. A legacy in-memory session is imported on first initialization when available. A one-time transactional cleanup removes known built-in demo records without an uploaded file, matching their original supplier, buyer and invoice key. User invoices and uploaded-document records are preserved. No sample-population call runs during startup.
+An uninitialized database receives the explicitly requested ten-supplier presentation batch once. Existing records are loaded on every rerun. A legacy in-memory session is imported on first initialization when available. A one-time transactional cleanup removes known built-in demo records without an uploaded file, matching their original supplier, buyer and invoice key. User invoices and uploaded-document records are preserved. Only the explicitly requested ten-supplier batch is applied once; the removed catalog is never restored.
 
 Each change updates one invoice in a transaction. A version check rejects stale writes, and database uniqueness constraints reject repeated supplier references and identical file hashes across sessions. Failed saves do not show a success message or replace saved data. Reset is atomic.
 
@@ -185,8 +185,9 @@ transaction. Either the entire selection is recorded or none is. Changes to
 quotes, budget, selection, or the shared portfolio invalidate the review. No
 money is transferred. Existing financed invoices retain their saved pricing.
 
-Workspaces no longer receive generated invoices. Existing built-in examples are
-removed once on startup; unrelated user records and uploaded documents remain.
+The old 30-invoice catalog is removed once on startup; unrelated user records
+and uploaded documents remain. Only the separately requested ten-supplier batch
+is added once.
 The old catalog generators remain as automated-test fixtures and cleanup identity
 references, and are not exposed as application actions.
 
@@ -235,3 +236,15 @@ The manual simulator separately sets a one-off fee and a theoretical annual
 interest assumption. Those independent inputs do not establish consistent
 contractual cash flows, and theoretical interest must never be added to the
 invoice repayment or presented as collected income.
+
+### Requested ten-supplier presentation batch
+
+Following the removal of the old 30-record catalog, an explicitly requested batch
+adds ten fictional invoices once per database. Each supplier is distinct and
+labelled Démo. All ten invoices are EUR 10,000 due in 60 days, with the same
+fictional Central risk assumptions, so their initial model quotes match. Buyer
+confirmation and checks are simulated; none is already financed. The EUR 100,000
+total face value is distinct from the sum of advances offered.
+
+The batch preserves existing user invoices, never overwrites edits and is not
+recreated after the workspace is cleared. The original catalog stays removed.

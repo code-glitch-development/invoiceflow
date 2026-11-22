@@ -32,6 +32,7 @@ try:
     migrate_session(initial)
     database.initialize(initial)
     database.remove_builtin_demo_invoices()
+    database.add_requested_supplier_examples()
     invoices = database.load()
     st.session_state.invoices = invoices
 except StorageError as exc:
