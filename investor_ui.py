@@ -192,6 +192,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.markdown('<span class="investor-badge">' + escape(t('SIMULATION · FICTIONAL DATA')) + '</span>', unsafe_allow_html=True)
     st.title(t('Choose your next financing opportunities') if page == 'Overview' else t('Compare your selection'))
     st.caption(t('Compare capital, payment horizons and scenarios before simulating an investment.'))
+    st.caption(t('Pricing uses fictional risk assumptions and fixed costs, not a market quote. Annualised rates can be high for small amounts or short durations.'))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
     st.markdown('<div class="risk-legend" aria-label="' + escape(t('Simulated risk level')) + '">' +
                 ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
@@ -254,20 +255,14 @@ def render_investor(page, invoices, database, t, euro, navigate):
                              f" · **{holding_yield_percent(invoice['amount'], report['advance']):.2f} %**")
                     st.write(t('Gross annual yield (continuous)') + f" · **{report['annual_rate_percent']:.2f} %**")
                     st.caption(t('Returns assume full payment on the expected payment date, before costs and losses. They are not guaranteed.'))
+                    st.caption(t('Fixed transaction cost included in pricing: {cost}. The annual rate extrapolates the operation to one year; it is not the gain over this invoice period.', cost=euro(report['assumptions']['upfront_cost'])))
                 outstanding = buyer_outstanding_capital(invoices, invoice['buyer'])['outstanding_capital']
                 if outstanding:
                     st.warning(t('Already exposed to this buyer') + ' · ' + euro(outstanding))
                 st.caption(invoice['reference'])
                 st.button(t('Review this financing'), key='dossier_' + identifier,
                     on_click=open_dossier, args=(entry, navigate), use_container_width=True, type='primary')
-        with st.expander(t('Demo data and unavailable offers')):
-            st.caption(t('Restore missing fictional examples from the 30-invoice catalog without replacing saved invoices.'))
-            if st.button(t('Restore demo examples'), key='investor_add_examples'):
-                try:
-                    database.populate_demo_catalog()
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(t(str(exc)))
+        with st.expander(t('Unavailable offers')):
             for entry in entries:
                 if not entry['report']['acceptable']:
                     st.write(entry['invoice']['reference'])

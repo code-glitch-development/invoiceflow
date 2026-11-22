@@ -43,7 +43,7 @@ The demo role selector opens a distinct workspace and returns to its overview:
 
 Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
 
-1. Open the **SME → Overview** to explore the four fictional examples.
+1. Open **SME → Overview**. New workspaces start empty; upload or enter your own invoice to begin.
 2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**, and tick both simulated checks.
 3. Select **Buyer → Buyer confirmation**. Choose the buyer and invoice, check the confirmation box and save. You can also dispute an invoice with a reason.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
@@ -54,7 +54,7 @@ The **Invoice progress** view shows Submitted → Confirmed → Eligible → Fin
 
 The **Invoice checks** page lets the SME complete simulated identity/document checks without changing confirmed invoice terms. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Low scores, disputes and expired due dates are never bypassed.
 
-Use the sidebar to reset the shared demo. Resetting replaces the data for every visitor. Example due dates are relative to the date the database is first initialized or reset.
+The sidebar can clear the shared workspace only after an explicit deletion checkbox is selected. It never reloads sample invoices.
 
 ## Model and limitations
 
@@ -87,7 +87,7 @@ Select the GitHub repository, the `main` branch and `app.py` as the main file. N
 
 Default location: `data/invoiceflow.db`, relative to `app.py`. It is created automatically on first launch. Set the `INVOICEFLOW_DB_PATH` environment variable to use another location. SQLite is included with Python; no extra dependency is required.
 
-Only an uninitialized database receives the example dataset. Existing records are loaded on every rerun. A legacy in-memory session is imported on first initialization when available. Saved samples keep their original due dates; use Reset demo for fresh examples.
+An uninitialized database starts empty. Existing records are loaded on every rerun. A legacy in-memory session is imported on first initialization when available. A one-time transactional cleanup removes known built-in demo records without an uploaded file, matching their original supplier, buyer and invoice key. User invoices and uploaded-document records are preserved. No sample-population call runs during startup.
 
 Each change updates one invoice in a transaction. A version check rejects stale writes, and database uniqueness constraints reject repeated supplier references and identical file hashes across sessions. Failed saves do not show a success message or replace saved data. Reset is atomic.
 
@@ -185,21 +185,10 @@ transaction. Either the entire selection is recorded or none is. Changes to
 quotes, budget, selection, or the shared portfolio invalidate the review. No
 money is transferred. Existing financed invoices retain their saved pricing.
 
-New and existing workspaces receive a catalog of 30 fictional invoices (including
-the four original samples). It contains 19 eligible opportunities, plus pending,
-incomplete, disputed, financed and paid examples, spread across six buyers and
-several amounts and due dates. Dates are relative to the day the samples are
-created; completed examples include consistent financing and payment dates.
-
-A versioned, atomic database migration appends missing samples once. It preserves
-existing invoices, their IDs, versions, edits, financing and payment events.
-Reloading does not duplicate examples or recreate ones subsequently removed.
-Existing custom invoices can bring the total above 30. To append missing catalog
-examples again, use `Restore demo examples` under `Demo data and unavailable
-offers`. `Reload examples` replaces the workspace with the full 30-invoice demo
-only after the existing reset checkbox is selected. These fictional workflow
-records do not change the separate fixed annual PD cohorts.
-
+Workspaces no longer receive generated invoices. Existing built-in examples are
+removed once on startup; unrelated user records and uploaded documents remain.
+The old catalog generators remain as automated-test fixtures and cleanup identity
+references, and are not exposed as application actions.
 
 ### Simplified demonstration interface
 
@@ -218,3 +207,31 @@ financing → Portfolio. For a usability session, ask someone unfamiliar with th
 app to complete that task without oral guidance; record completion, time, wrong
 turns and any requests for help. Automated workflow checks are not a substitute
 for that participant session.
+
+### Understanding the displayed rates
+
+Risk pricing is an illustrative model, not a market quote or a calibrated buyer
+assessment. Default assumptions include 3% annual funding cost, 1% capital charge,
+2% target margin, EUR 20 upfront costs, 60% nominal LGD, 5 days expected payment
+delay and 90 days recovery lag. The Central fictional cohort has 2% annual PD.
+The model first solves the advance from expected discounted payment/recovery
+cash flows. It then derives three different ratios, which must not be confused:
+
+- Fee on invoice: `(face - advance) / face`.
+- Gross return over the operation: `(face - advance) / advance`.
+- Annual continuous equivalent: `100 * ln(face / advance) * 365 / horizon_days`.
+
+With a EUR 10,000 invoice due in 60 days, Central defaults use a 65-day collection
+horizon and produce a EUR 9,855.03 advance: EUR 144.97 gross gain, 1.4497% fee on
+face, 1.4710% return over the operation and 8.2002% annual continuous equivalent.
+For EUR 1,000 due in 10 days (15-day horizon), the same assumptions produce
+EUR 977.09 advanced and EUR 22.91 gross gain: 2.3447% over the operation but
+56.3962% annual continuous equivalent. Fixed EUR 20 costs explain much of that
+short-term annualisation. Neither annual rate is an observed buyer credit rate
+or a guarantee of receipts. Quotes are recalculated as the remaining horizon
+changes; confirmed transactions keep their saved terms.
+
+The manual simulator separately sets a one-off fee and a theoretical annual
+interest assumption. Those independent inputs do not establish consistent
+contractual cash flows, and theoretical interest must never be added to the
+invoice repayment or presented as collected income.

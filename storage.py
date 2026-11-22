@@ -81,6 +81,26 @@ class InvoiceStore:
             for invoice in invoices:
                 self._insert(db, invoice)
 
+    def remove_builtin_demo_invoices(self):
+        """One-time cleanup of known shipped samples; preserve user invoice records."""
+        from demo_catalog import builtin_demo_identities
+        from engine import canonical
+        marker = 'builtin-demo-cleanup-v1'
+        identities = builtin_demo_identities()
+        with self.transaction() as db:
+            if db.execute('SELECT 1 FROM metadata WHERE key = ?', (marker,)).fetchone():
+                return 0
+            removed = 0
+            for identifier, payload in db.execute('SELECT id, payload FROM invoices').fetchall():
+                invoice = json.loads(payload)
+                identity = (invoice.get('key'), canonical(invoice.get('seller', '')),
+                            canonical(invoice.get('buyer', '')))
+                if identity in identities and not invoice.get('file_hash'):
+                    db.execute('DELETE FROM invoices WHERE id = ?', (identifier,))
+                    removed += 1
+            db.execute('INSERT INTO metadata VALUES (?, ?)', (marker, '1'))
+        return removed
+
     def finance_selection(self, review):
         """Recheck the reviewed portfolio and fund the whole batch atomically."""
         from opportunities import review_selection

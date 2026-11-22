@@ -10,11 +10,10 @@ from storage import InvoiceStore, StorageError
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
-from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
+from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
 from investor_ui import render_investor, render_portfolio_summary
-from demo_catalog import catalog_examples
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -29,13 +28,10 @@ t = Translator(language).text
 st.markdown('<style>\n.block-container {padding-top:2rem; max-width:1400px}\n[data-testid="stSidebar"] {background:#13253c}\n[data-testid="stSidebar"] {color:#f2f6fb}\n[data-testid="stSidebar"] [data-testid="stMarkdownContainer"], [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {color:#f2f6fb}\n[data-testid="stSidebar"] [data-baseweb="select"] {background:#f5f7fb; border-radius:8px}\n[data-testid="stSidebar"] [data-baseweb="select"] * {color:#142239 !important; -webkit-text-fill-color:#142239 !important}\n[role="listbox"] {background:#f5f7fb; color:#142239}\n[role="option"] {color:#142239}\n[data-testid="stMetric"] {background:white; border:1px solid #e1e8ef; padding:20px; border-radius:16px}\n.hero {background:linear-gradient(120deg,#13253c,#164b53);color:white;padding:32px;border-radius:22px;margin-bottom:24px}\n.hero h1 {color:white;font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.2;margin:0;overflow-wrap:break-word}.hero p {color:#d3e7e6;margin-bottom:0}\n.eyebrow {font-size:.8rem;letter-spacing:.16em;color:#87e3c7;margin-bottom:10px}\n</style>', unsafe_allow_html=True)
 database = InvoiceStore(os.environ.get('INVOICEFLOW_DB_PATH', str(Path(__file__).parent / 'data' / 'invoiceflow.db')))
 try:
-    initial = st.session_state.get('invoices')
-    if initial is None:
-        initial = seed()
-        initial += catalog_examples(initial)
+    initial = st.session_state.get('invoices', [])
     migrate_session(initial)
     database.initialize(initial)
-    database.populate_demo_catalog(once=True)
+    database.remove_builtin_demo_invoices()
     invoices = database.load()
     st.session_state.invoices = invoices
 except StorageError as exc:
@@ -226,13 +222,11 @@ with st.sidebar:
     page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
     st.divider()
     st.caption(t('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.'))
-    with st.expander(t('Reset demo')):
-        reset = st.checkbox(t('Replace the shared demo data for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
-        if st.button(t('Reload examples'), disabled=not reset, key='ui_reload_examples'):
+    with st.expander(t('Workspace data')):
+        reset = st.checkbox(t('Delete all saved invoices for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
+        if st.button(t('Clear invoice workspace'), disabled=not reset, key='ui_reload_examples'):
             try:
-                examples = seed()
-                examples += catalog_examples(examples)
-                database.reset(examples)
+                database.reset([])
                 st.session_state.pop('focus_invoice', None)
                 st.session_state.pop('ui_filter_statuses', None)
                 st.rerun()

@@ -1145,6 +1145,16 @@ FR.update({
 })
 
 
+FR.update({
+    'Workspace data': 'Données de l’espace',
+    'Delete all saved invoices for all visitors': 'Supprimer toutes les factures enregistrées pour tous les visiteurs',
+    'Clear invoice workspace': 'Vider les factures de l’espace',
+    'Unavailable offers': 'Offres indisponibles',
+    'Pricing uses fictional risk assumptions and fixed costs, not a market quote. Annualised rates can be high for small amounts or short durations.': 'Les prix reposent sur des hypothèses de risque fictives et des coûts fixes, pas sur une offre de marché. Les taux annualisés peuvent être élevés sur de petits montants ou de courtes durées.',
+    'Fixed transaction cost included in pricing: {cost}. The annual rate extrapolates the operation to one year; it is not the gain over this invoice period.': 'Coût fixe inclus dans le calcul : {cost}. Le taux annuel extrapole l’opération sur un an ; ce n’est pas le gain sur la durée de cette facture.',
+})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

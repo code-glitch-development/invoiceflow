@@ -24,6 +24,23 @@ AMOUNTS = [1250, 2400, 3600, 4800, 6200, 7500, 8900, 10500,
 HORIZONS = [10, 15, 20, 30, 45, 60, 75, 90, 120]
 
 
+def builtin_demo_identities():
+    """Stable sample identities, independent of dates, amounts and financing edits."""
+    rows = [
+        ('Atelier Nova', '123456789', 'Groupe Horizon', 'NOV-2026-041'),
+        ('Studio Azur', '234567891', 'Groupe Horizon', 'AZ-2026-018'),
+        ('Data & Co', '345678912', 'Maison Atlas', 'DC-2026-073'),
+        ('Orbite Conseil', '456789123', 'Maison Atlas', 'OC-2026-009'),
+        ('Studio Azur', '234567891', 'Maison Atlas', 'DEMO-INVEST-ATLAS'),
+        ('Orbite Conseil', '456789123', 'Groupe Cobalt', 'DEMO-INVEST-COBALT'),
+    ]
+    for index in range(len(AMOUNTS)):
+        seller, siren = SUPPLIERS[index % len(SUPPLIERS)]
+        rows.append((seller, siren, BUYERS[index % len(BUYERS)], f'DEMO-CATALOG-{index + 1:03d}'))
+    return {(siren + ':' + canonical(reference), canonical(seller), canonical(buyer))
+            for seller, siren, buyer, reference in rows}
+
+
 def catalog_examples(existing):
     """Return missing samples only; existing data and outcomes remain authoritative."""
     today = valuation_today()

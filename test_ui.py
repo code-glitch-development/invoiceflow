@@ -16,30 +16,63 @@ class InterfaceTests(unittest.TestCase):
         self.environment = patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': str(Path(self.directory.name) / 'demo.db')})
         self.environment.start()
         self.addCleanup(self.environment.stop)
+        # Explicit test fixtures only: production startup now creates no invoices.
+        import os
+        from engine import seed
+        from demo_catalog import catalog_examples
+        from storage import InvoiceStore
+        store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        store.initialize([])
+        store.remove_builtin_demo_invoices()
+        records = seed()
+        records += catalog_examples(records)
+        store.reset(records)
 
     def app(self):
         from streamlit.testing.v1 import AppTest
         return AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20).run()
 
-    def test_catalog_populates_existing_database_once_without_overwriting(self):
+    def test_new_workspace_stays_empty_without_example_restore_actions(self):
         import os
-        from engine import seed, finance
+        from streamlit.testing.v1 import AppTest
+        from workspaces import WORKSPACES
+        empty_path = str(Path(self.directory.name) / 'empty.db')
+        with patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': empty_path}):
+            at = self.app()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.session_state['invoices'], [])
+            for role in ('SME', 'Buyer', 'Investor'):
+                at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
+                for page in WORKSPACES[role]['pages']:
+                    at.sidebar.radio(key='ui_navigation').set_value(page).run()
+                    self.assertFalse(at.exception)
+                    self.assertEqual(at.session_state['invoices'], [])
+            at.run()
+            self.assertEqual(at.session_state['invoices'], [])
+            self.assertNotIn('investor_add_examples', [b.key for b in at.button])
+
+    def test_startup_removes_old_samples_and_preserves_user_invoice(self):
+        import os
+        from engine import seed, new_invoice
+        from demo_catalog import catalog_examples
         from storage import InvoiceStore
+        from datetime import date, timedelta
+        path = str(Path(self.directory.name) / 'upgrade.db')
+        store = InvoiceStore(path)
         records = seed()
-        finance(records[0], 4, False, 0)
-        store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
-        store.initialize(records)
-        before = store.load()
-        at = self.app()
-        self.assertFalse(at.exception)
-        self.assertEqual(len(at.session_state['invoices']), 30)
-        self.assertEqual(at.session_state['invoices'][:4], before)
-        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
-        self.assertFalse(at.exception)
-        self.assertGreaterEqual(len([c for c in at.checkbox if c.key.startswith('compare_')]), 12)
-        identifiers = [i['id'] for i in at.session_state['invoices']]
-        at.run()
-        self.assertEqual([i['id'] for i in at.session_state['invoices']], identifiers)
+        records += catalog_examples(records)
+        custom = new_invoice(records, seller='My supplier', siren='987654321', buyer='My buyer',
+            reference='REAL-001', amount=10000, issued=date.today(),
+            due=date.today()+timedelta(days=60), documents=True, identity=True,
+            strength='Strong', history='On time')
+        store.initialize(records + [custom])
+        before = store.load()[-1]
+        with patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': path}):
+            at = self.app()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.session_state['invoices'], [before])
+            at.run()
+            self.assertEqual(at.session_state['invoices'], [before])
 
     def test_all_screens(self):
         from workspaces import WORKSPACES
