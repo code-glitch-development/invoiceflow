@@ -260,3 +260,12 @@ All figures are gross and simulated. Potential returns assume full collection,
 including for incident invoices; they exclude unrecorded recoveries, hypothetical
 insurance and exponential theoretical interest. They do not establish net
 profitability or calibrated risk-adjusted performance.
+
+### Cleanup of the accidental ten-supplier batch
+
+A separate one-time cleanup removes records tagged with
+`demo_source=requested-ten-suppliers-v1` that have no uploaded file. This handles
+databases that already loaded that batch before automatic insertion was reverted.
+The cleanup runs before the workspace is displayed and applies to the shared
+records in every role, not just the SME table. Uploaded documents and manually
+created records without that provenance are preserved. No examples are recreated.

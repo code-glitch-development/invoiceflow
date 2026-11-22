@@ -101,6 +101,22 @@ class InvoiceStore:
             db.execute('INSERT INTO metadata VALUES (?, ?)', (marker, '1'))
         return removed
 
+    def remove_auto_supplier_batch(self):
+        """Remove the accidental auto-inserted ten-supplier batch, once per database."""
+        marker = 'remove-auto-ten-supplier-batch-v1'
+        source = 'requested-ten-suppliers-v1'
+        with self.transaction() as db:
+            if db.execute('SELECT 1 FROM metadata WHERE key = ?', (marker,)).fetchone():
+                return 0
+            removed = 0
+            for identifier, payload in db.execute('SELECT id, payload FROM invoices').fetchall():
+                invoice = json.loads(payload)
+                if invoice.get('demo_source') == source and not invoice.get('file_hash'):
+                    db.execute('DELETE FROM invoices WHERE id = ?', (identifier,))
+                    removed += 1
+            db.execute('INSERT INTO metadata VALUES (?, ?)', (marker, '1'))
+        return removed
+
     def finance_selection(self, review):
         """Recheck the reviewed portfolio and fund the whole batch atomically."""
         from opportunities import review_selection

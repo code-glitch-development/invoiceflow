@@ -65,7 +65,9 @@ class InterfaceTests(unittest.TestCase):
             reference='REAL-001', amount=10000, issued=date.today(),
             due=date.today()+timedelta(days=60), documents=True, identity=True,
             strength='Strong', history='On time')
-        store.initialize(records + [custom])
+        auto = dict(records[0], id='AUTO-SUPPLIER', key='990000001:demoprestataire01',
+                    reference='DEMO-PRESTATAIRE-01', demo_source='requested-ten-suppliers-v1')
+        store.initialize(records + [auto, custom])
         before = store.load()[-1]
         with patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': path}):
             at = self.app()

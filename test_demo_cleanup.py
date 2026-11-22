@@ -45,6 +45,28 @@ class DemoCleanupTests(unittest.TestCase):
         reopened.initialize([])
         self.assertEqual(reopened.load(), [])
 
+    def test_remove_auto_batch_after_original_cleanup_preserves_user_imports(self):
+        self.store.initialize([])
+        self.store.remove_builtin_demo_invoices()
+        records = []
+        for index in range(1, 11):
+            invoice = deepcopy(self.samples()[0])
+            invoice.update(id=f'AUTO-{index}', key=f'990000{index:03d}:demoprestataire{index:02d}',
+                reference=f'DEMO-PRESTATAIRE-{index:02d}', seller=f'Démo — Supplier {index}',
+                demo_source='requested-ten-suppliers-v1')
+            records.append(invoice)
+        imported = deepcopy(records[0])
+        imported.update(id='UPLOADED', key='uploaded-reference', file_hash='uploaded-file-hash')
+        custom = deepcopy(records[0])
+        custom.update(id='USER-ENTERED', key='custom-key', seller='My supplier')
+        custom.pop('demo_source')
+        self.store.reset(records + [imported, custom])
+        expected = self.store.load()[-2:]
+        self.assertEqual(self.store.remove_auto_supplier_batch(), 10)
+        self.assertEqual(self.store.load(), expected)
+        self.assertEqual(self.store.remove_auto_supplier_batch(), 0)
+        self.assertEqual(self.store.load(), expected)
+
 
 if __name__ == '__main__':
     unittest.main()
