@@ -143,7 +143,7 @@ class InterfaceTests(unittest.TestCase):
             self.assertNotIn('review_selection', [b.key for b in at.button])
             details = [e for e in at.expander if e.label == translate('Returns and payment details')]
             self.assertTrue(details)
-            self.assertTrue(all(not e.expanded for e in details))
+            self.assertTrue(all(not e.proto.expanded for e in details))
             entries = filtered(opportunities(at.session_state['invoices']), 25000, 90)
             content = [m.value for m in at.markdown]
             for entry in entries:
@@ -174,7 +174,7 @@ class InterfaceTests(unittest.TestCase):
             self.assertFalse(at.exception)
             self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Financing')
             advanced = next(e for e in at.expander if e.label == t('Advanced pricing assumptions'))
-            self.assertFalse(advanced.expanded)
+            self.assertFalse(advanced.proto.expanded)
             self.assertFalse(at.button(key='ui_simulate_financing').disabled)
             at.button(key='ui_simulate_financing').click().run()
             self.assertFalse(at.exception)
