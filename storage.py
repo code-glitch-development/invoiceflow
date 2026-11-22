@@ -101,19 +101,6 @@ class InvoiceStore:
             db.execute('INSERT INTO metadata VALUES (?, ?)', (marker, '1'))
         return removed
 
-    def add_requested_supplier_examples(self):
-        """Add the requested ten records once, preserving user data and later deletions."""
-        from requested_examples import BATCH_VERSION, requested_supplier_examples
-        with self.transaction() as db:
-            if db.execute('SELECT 1 FROM metadata WHERE key = ?', (BATCH_VERSION,)).fetchone():
-                return 0
-            existing = [json.loads(row[0]) for row in db.execute('SELECT payload FROM invoices')]
-            additions = requested_supplier_examples(existing)
-            for invoice in additions:
-                self._insert(db, invoice)
-            db.execute('INSERT INTO metadata VALUES (?, ?)', (BATCH_VERSION, '1'))
-        return len(additions)
-
     def finance_selection(self, review):
         """Recheck the reviewed portfolio and fund the whole batch atomically."""
         from opportunities import review_selection

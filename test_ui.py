@@ -16,7 +16,7 @@ class InterfaceTests(unittest.TestCase):
         self.environment = patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': str(Path(self.directory.name) / 'demo.db')})
         self.environment.start()
         self.addCleanup(self.environment.stop)
-        # Explicit legacy fixtures for existing workflow regression checks.
+        # Explicit test fixtures only: production startup now creates no invoices.
         import os
         from engine import seed
         from demo_catalog import catalog_examples
@@ -24,7 +24,6 @@ class InterfaceTests(unittest.TestCase):
         store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
         store.initialize([])
         store.remove_builtin_demo_invoices()
-        store.add_requested_supplier_examples()
         records = seed()
         records += catalog_examples(records)
         store.reset(records)
@@ -33,7 +32,7 @@ class InterfaceTests(unittest.TestCase):
         from streamlit.testing.v1 import AppTest
         return AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20).run()
 
-    def test_requested_ten_suppliers_are_added_once_without_old_catalog(self):
+    def test_new_workspace_stays_empty_without_example_restore_actions(self):
         import os
         from streamlit.testing.v1 import AppTest
         from workspaces import WORKSPACES
@@ -41,16 +40,15 @@ class InterfaceTests(unittest.TestCase):
         with patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': empty_path}):
             at = self.app()
             self.assertFalse(at.exception)
-            self.assertEqual(len(at.session_state['invoices']), 10)
-            self.assertEqual(len({i['seller'] for i in at.session_state['invoices']}), 10)
+            self.assertEqual(at.session_state['invoices'], [])
             for role in ('SME', 'Buyer', 'Investor'):
                 at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
                 for page in WORKSPACES[role]['pages']:
                     at.sidebar.radio(key='ui_navigation').set_value(page).run()
                     self.assertFalse(at.exception)
-                    self.assertEqual(len(at.session_state['invoices']), 10)
+                    self.assertEqual(at.session_state['invoices'], [])
             at.run()
-            self.assertEqual(len(at.session_state['invoices']), 10)
+            self.assertEqual(at.session_state['invoices'], [])
             self.assertNotIn('investor_add_examples', [b.key for b in at.button])
 
     def test_startup_removes_old_samples_and_preserves_user_invoice(self):
@@ -72,11 +70,9 @@ class InterfaceTests(unittest.TestCase):
         with patch.dict('os.environ', {'INVOICEFLOW_DB_PATH': path}):
             at = self.app()
             self.assertFalse(at.exception)
-            self.assertEqual(at.session_state['invoices'][0], before)
-            self.assertEqual(len(at.session_state['invoices']), 11)
+            self.assertEqual(at.session_state['invoices'], [before])
             at.run()
-            self.assertEqual(at.session_state['invoices'][0], before)
-            self.assertEqual(len(at.session_state['invoices']), 11)
+            self.assertEqual(at.session_state['invoices'], [before])
 
     def test_all_screens(self):
         from workspaces import WORKSPACES
