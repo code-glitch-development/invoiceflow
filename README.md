@@ -125,6 +125,7 @@ python -m unittest -v
 
 ## Files
 
+- `assets/invoiceflow-logo.png`: InvoiceFlow logo, displayed on a white panel in the dark sidebar. The asset path is resolved relative to `app.py`.
 - `app.py`: Streamlit interface and workflows.
 - `invoice_extraction.py`: local PDF text extraction, OCR, labelled-field parsing and session prefill.
 - `packages.txt`: OCR executable and language dependencies for Community Cloud.
@@ -161,6 +162,23 @@ pricing costs. These scenarios use the existing fictional annual cohorts, not
 calibrated client ratings. Adding transactions cannot dilute their annual PD.
 The detailed financing and simulator screens remain accessible.
 
+Opportunity cards and the comparator distinguish gross return over the operation
+(`(face value - advance) / advance`) from its annual continuous equivalent.
+Both assume full payment on the expected collection date, before costs and losses;
+neither is a guaranteed or risk-adjusted net return.
+
+The Investor Portfolio shows outstanding principal, simulated full-payment
+receipts (including returned principal), realized gross gains after simulated
+payment, potential gross gains on unpaid financed invoices, overdue principal,
+and overdue invoice count. These totals cover the whole saved workspace and do
+not follow opportunity or portfolio status filters. They exclude theoretical
+exponential interest, hypothetical insurance and unrecorded recoveries.
+Potential gains include incident invoices under a full-payment assumption.
+Portfolio details group unpaid principal and its share by normalized buyer name
+and list overdue invoices. A due date before today (Europe/Paris), or an explicit
+late-payment event, marks an unpaid financed invoice overdue; due today does not.
+This remains a shared fictional portfolio, not an authenticated personal account.
+
 `Simulate this selection` opens a review. Confirmation rechecks invoice versions,
 eligibility, current quotes, and the aggregate budget inside one database
 transaction. Either the entire selection is recorded or none is. Changes to
@@ -181,3 +199,22 @@ examples again, use `Restore demo examples` under `Demo data and unavailable
 offers`. `Reload examples` replaces the workspace with the full 30-invoice demo
 only after the existing reset checkbox is selected. These fictional workflow
 records do not change the separate fixed annual PD cohorts.
+
+
+### Simplified demonstration interface
+
+The Opportunities screen focuses on capital to advance, payment horizon and
+potential gross gain. Each card has a collapsed return/payment section and a
+primary `Review this financing` action. Portfolio totals appear only in Portfolio.
+An empty selection does not show a comparison or funding summary.
+
+Financing keeps a visible quote and financing action, with pricing inputs,
+financing options, risk/exposure details and calculation breakdown in collapsed
+sections. All widgets remain rendered and their original validation and saved
+assumptions still apply. Blockers remain visible outside the collapsed sections.
+
+For a five-minute demo, use Opportunities → Review this financing → Simulate
+financing → Portfolio. For a usability session, ask someone unfamiliar with the
+app to complete that task without oral guidance; record completion, time, wrong
+turns and any requests for help. Automated workflow checks are not a substitute
+for that participant session.

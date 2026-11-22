@@ -125,6 +125,65 @@ class InterfaceTests(unittest.TestCase):
         metric = next(m.value for m in at.metric if m.label == 'Model maximum advance')
         self.assertEqual(metric, f"€{expected['advance']:,.2f}")
 
+    def test_investor_dashboard_is_in_portfolio_and_card_returns_are_collapsed(self):
+        from i18n import Translator
+        from opportunities import filtered, opportunities
+        from portfolio import holding_yield_percent, portfolio_summary
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        for language in ('EN', 'FR'):
+            at.sidebar.radio(key='language').set_value(language).run()
+            translate = Translator(language).text
+            summary = portfolio_summary(at.session_state['invoices'])
+            monetary = lambda n: (f'{n:,.2f}'.replace(',', ' ').replace('.', ',') + ' €'
+                                  if language == 'FR' else f'€{n:,.2f}')
+            values = {m.label: m.value for m in at.metric}
+            self.assertNotIn(translate('Outstanding capital'), values)
+            self.assertNotIn(translate('Simulated repayments received'), values)
+            self.assertNotIn('review_selection', [b.key for b in at.button])
+            details = [e for e in at.expander if e.label == translate('Returns and payment details')]
+            self.assertTrue(details)
+            self.assertTrue(all(not e.expanded for e in details))
+            entries = filtered(opportunities(at.session_state['invoices']), 25000, 90)
+            content = [m.value for m in at.markdown]
+            for entry in entries:
+                face, report = entry['invoice']['amount'], entry['report']
+                self.assertIn(translate('Gross return over the operation') +
+                              f" · **{holding_yield_percent(face, report['advance']):.2f} %**", content)
+                self.assertIn(translate('Gross annual yield (continuous)') +
+                              f" · **{report['annual_rate_percent']:.2f} %**", content)
+            at.button(key='investor_portfolio_details').click().run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Portfolio')
+            values = {m.label: m.value for m in at.metric}
+            self.assertEqual(values[translate('Realized gross gains (simulation)')], monetary(summary['realized_gain']))
+            self.assertEqual(values[translate('Overdue invoices')], str(summary['overdue_count']))
+            at.sidebar.radio(key='ui_navigation').set_value('Overview').run()
+
+    def test_guided_single_invoice_financing_without_editing_technical_inputs(self):
+        from i18n import Translator
+        for language in ('EN', 'FR'):
+            at = self.app()
+            at.sidebar.radio(key='language').set_value(language).run()
+            at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+            t = Translator(language).text
+            action = next(b for b in at.button if b.key and b.key.startswith('dossier_'))
+            identifier = action.key.removeprefix('dossier_')
+            self.assertEqual(action.label, t('Review this financing'))
+            action.click().run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Financing')
+            advanced = next(e for e in at.expander if e.label == t('Advanced pricing assumptions'))
+            self.assertFalse(advanced.expanded)
+            self.assertFalse(at.button(key='ui_simulate_financing').disabled)
+            at.button(key='ui_simulate_financing').click().run()
+            self.assertFalse(at.exception)
+            saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
+            self.assertEqual(saved['status'], 'Financed')
+            at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+            self.assertFalse(at.exception)
+            self.assertTrue(any(m.label == t('Outstanding capital') for m in at.metric))
+
     def test_upload_prefills_editable_fields_and_saves_corrections(self):
         from io import BytesIO
         from test_extraction import text_pdf

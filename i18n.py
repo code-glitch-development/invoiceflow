@@ -1100,10 +1100,48 @@ FR.update({
 
 FR.update({
     'Lower simulated risk': 'Risque simulé faible',
+    'Annual yield (continuous)': 'Taux de rendement annuel (continu)',
     'Moderate simulated risk': 'Risque simulé modéré',
     'Higher simulated risk': 'Risque simulé élevé',
     'Simulated risk level': 'Niveau de risque simulé',
     'Colours describe the selected fictional scenario, not a verified credit rating.': 'Les couleurs représentent le scénario fictif sélectionné, sans notation de crédit vérifiée.',
+})
+
+
+FR.update({
+    'Gross annual yield (continuous)': 'Rendement annuel brut (continu)',
+    'Gross annual yield (continuous, %)': 'Rendement annuel brut (continu, %)',
+    'Gross return over the operation': 'Rendement brut sur la durée de l’opération',
+    'Gross return over the operation (%)': 'Rendement brut sur la durée de l’opération (%)',
+    'Returns assume full payment on the expected payment date, before costs and losses. They are not guaranteed.': 'Ces rendements supposent un paiement intégral à la date de paiement prévue, avant coûts et pertes. Ils ne sont pas garantis.',
+    'Your investment portfolio': 'Votre portefeuille d’investissement',
+    'Outstanding capital': 'Capital engagé non remboursé',
+    'Simulated repayments received': 'Remboursements simulés reçus',
+    'Realized gross gains (simulation)': 'Gains bruts réalisés (simulation)',
+    'Potential gross gains on unpaid invoices': 'Gains bruts potentiels sur les factures non remboursées',
+    'Capital on overdue invoices': 'Capital sur les factures en retard',
+    'Overdue invoices': 'Factures en retard',
+    'Whole saved portfolio, independent of filters. Repayments include returned capital; realized gains are counted only after simulated full payment.': 'Portefeuille enregistré complet, indépendamment des filtres. Les remboursements incluent le capital restitué ; les gains réalisés sont comptés uniquement après simulation du paiement intégral.',
+    'Gains are before costs and losses. Potential gains assume full payment of every unpaid financed invoice, including incidents. Theoretical interest and hypothetical insurance are excluded.': 'Les gains sont présentés avant coûts et pertes. Les gains potentiels supposent le paiement intégral de toutes les factures financées non remboursées, y compris celles en incident. Les intérêts théoriques et l’assurance hypothétique sont exclus.',
+    'Outstanding exposure by buyer': 'Exposition en cours par acheteur',
+    'Share of outstanding capital': 'Part du capital engagé',
+    'Unpaid financed invoices': 'Factures financées non remboursées',
+    'No outstanding financed invoices.': 'Aucune facture financée non remboursée.',
+    'Overdue invoice tracking': 'Suivi des factures en retard',
+    'An unpaid financed invoice is overdue after its due date or when a late-payment event is recorded. Due today is not overdue.': 'Une facture financée non remboursée est en retard après son échéance ou lorsqu’un retard de paiement est déclaré. Une échéance aujourd’hui ne constitue pas un retard.',
+    'No overdue financed invoices.': 'Aucune facture financée en retard.',
+    'View portfolio details': 'Voir le détail du portefeuille',
+})
+
+
+FR.update({
+    'Returns and payment details': 'Rendements et détail du paiement',
+    'Review this financing': 'Examiner ce financement',
+    'Advanced pricing assumptions': 'Hypothèses de tarification avancées',
+    'Calculation breakdown': 'Détail du calcul',
+    'Financing options': 'Options de financement',
+    'Risk and exposure details': 'Détail du risque et de l’exposition',
+    '1. Choose an invoice. 2. Review the financing. 3. Confirm the simulation.': '1. Choisissez une facture. 2. Examinez le financement. 3. Confirmez la simulation.',
 })
 
 

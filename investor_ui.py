@@ -5,6 +5,7 @@ from html import escape
 import pandas as pd
 import streamlit as st
 from engine import buyer_outstanding_capital, canonical, money
+from portfolio import holding_yield_percent, portfolio_summary
 from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities,
                            filtered, review_selection, review_fingerprint)
 
@@ -104,7 +105,8 @@ def comparison(chosen, portfolio, budget, t, euro):
     if not chosen:
         st.info(t('Select up to three invoices to compare them.'))
         return
-    criteria = ['Buyer', 'Simulated risk level', 'Capital to advance', 'Payment horizon', 'Annual continuous rate (%)',
+    criteria = ['Buyer', 'Simulated risk level', 'Capital to advance', 'Payment horizon', 'Gross annual yield (continuous, %)',
+                'Gross return over the operation (%)',
                 'One-year buyer probability of default (%)', 'Nominal LGD before time discount (%)',
                 'Full-payment proceeds', 'Potential gross gain', 'Existing buyer exposure']
     data = {t('Criterion'): [t(label) for label in criteria]}
@@ -112,6 +114,7 @@ def comparison(chosen, portfolio, budget, t, euro):
         i, r = entry['invoice'], entry['report']
         data[i['reference'] + ' · ' + i['id']] = [i['buyer'], risk_label(entry['scenario'], t), euro(r['advance']),
             t('{days} days', days=r['horizon_days']), f"{r['annual_rate_percent']:.2f}",
+            f"{holding_yield_percent(i['amount'], r['advance']):.2f}",
             f"{r['assumptions']['annual_pd_percent']:.2f}", f"{r['assumptions']['lgd_percent']:.1f}",
             euro(i['amount']), euro(r['gross_discount']),
             euro(buyer_outstanding_capital(portfolio, i['buyer'])['outstanding_capital'])]
@@ -121,6 +124,7 @@ def comparison(chosen, portfolio, budget, t, euro):
     styled = frame.style.apply(lambda column: column.map(lambda value: styles.get(value, '')),
                                subset=pd.IndexSlice[[1], frame.columns[1:]])
     st.dataframe(styled, hide_index=True, use_container_width=True)
+    st.caption(t('Returns assume full payment on the expected payment date, before costs and losses. They are not guaranteed.'))
     # Sum selected advances by debtor, including multiple invoices for one debtor.
     grouped = {}
     for entry in chosen:
@@ -132,6 +136,45 @@ def comparison(chosen, portfolio, budget, t, euro):
         existing = buyer_outstanding_capital(portfolio, group['buyer'])['outstanding_capital']
         st.write(group['buyer'] + ' · ' + euro(existing + group['advance']))
     st.caption(t('Exposure uses buyer names in this demo, not verified legal identifiers.'))
+
+
+def render_portfolio_summary(invoices, t, euro, detailed=True):
+    summary = portfolio_summary(invoices)
+    st.subheader(t('Your investment portfolio'))
+    metrics = [
+        ('Outstanding capital', euro(summary['outstanding_capital'])),
+        ('Simulated repayments received', euro(summary['repayments'])),
+        ('Realized gross gains (simulation)', euro(summary['realized_gain'])),
+        ('Potential gross gains on unpaid invoices', euro(summary['potential_gain'])),
+        ('Capital on overdue invoices', euro(summary['overdue_capital'])),
+        ('Overdue invoices', str(summary['overdue_count'])),
+    ]
+    for offset in (0, 3):
+        for column, (label, value) in zip(st.columns(3), metrics[offset:offset + 3]):
+            column.metric(t(label), value)
+    st.caption(t('Whole saved portfolio, independent of filters. Repayments include returned capital; realized gains are counted only after simulated full payment.'))
+    st.caption(t('Gains are before costs and losses. Potential gains assume full payment of every unpaid financed invoice, including incidents. Theoretical interest and hypothetical insurance are excluded.'))
+    if not detailed:
+        return
+    st.markdown('**' + t('Outstanding exposure by buyer') + '**')
+    if summary['exposure']:
+        st.dataframe(pd.DataFrame([{t('Buyer'): row['buyer'],
+            t('Outstanding capital'): euro(row['capital']),
+            t('Share of outstanding capital'): f"{row['share_percent']:.2f} %",
+            t('Unpaid financed invoices'): row['count']} for row in summary['exposure']]),
+            hide_index=True, use_container_width=True)
+        st.caption(t('Exposure uses buyer names in this demo, not verified legal identifiers.'))
+    else:
+        st.info(t('No outstanding financed invoices.'))
+    st.markdown('**' + t('Overdue invoice tracking') + '**')
+    st.caption(t('An unpaid financed invoice is overdue after its due date or when a late-payment event is recorded. Due today is not overdue.'))
+    if summary['overdue']:
+        st.dataframe(pd.DataFrame([{t('Reference'): i['reference'], t('Buyer'): i['buyer'],
+            t('Due date'): i['due'], t('Outstanding capital'): euro(i['financing']['advance']),
+            t('Tracking'): t(i.get('outcome') or 'Late payment')} for i in summary['overdue']]),
+            hide_index=True, use_container_width=True)
+    else:
+        st.info(t('No overdue financed invoices.'))
 
 
 def render_investor(page, invoices, database, t, euro, navigate):
@@ -153,6 +196,10 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.markdown('<div class="risk-legend" aria-label="' + escape(t('Simulated risk level')) + '">' +
                 ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
     st.caption(t('Colours describe the selected fictional scenario, not a verified credit rating.'))
+    if page == 'Overview':
+        st.button(t('View portfolio details'), key='investor_portfolio_details',
+                  on_click=navigate, args=('Investor', 'Portfolio'))
+        st.caption(t('1. Choose an invoice. 2. Review the financing. 3. Confirm the simulation.'))
     saved_filters = st.session_state.get('investor_filters', {})
     for key, default in dict(inv_budget=25000.0, inv_horizon=90, inv_scenario='All').items():
         st.session_state.setdefault(key, saved_filters.get(key, default))
@@ -199,15 +246,20 @@ def render_investor(page, invoices, database, t, euro, navigate):
                     '<div class="offer-amount">' + escape(euro(report['advance'])) + '</div>', unsafe_allow_html=True)
                 st.caption(t('Capital to advance'))
                 st.write(t('Payment horizon') + ' · ' + t('{days} days', days=report['horizon_days']))
-                st.caption(t('Expected payment') + ' · ' + report['expected_payment_on'])
-                st.write(t('Full-payment proceeds') + ' · **' + euro(invoice['amount']) + '**')
                 st.write(t('Potential gross gain') + ' · **' + euro(report['gross_discount']) + '**')
+                with st.expander(t('Returns and payment details')):
+                    st.caption(t('Expected payment') + ' · ' + report['expected_payment_on'])
+                    st.write(t('Full-payment proceeds') + ' · **' + euro(invoice['amount']) + '**')
+                    st.write(t('Gross return over the operation') +
+                             f" · **{holding_yield_percent(invoice['amount'], report['advance']):.2f} %**")
+                    st.write(t('Gross annual yield (continuous)') + f" · **{report['annual_rate_percent']:.2f} %**")
+                    st.caption(t('Returns assume full payment on the expected payment date, before costs and losses. They are not guaranteed.'))
                 outstanding = buyer_outstanding_capital(invoices, invoice['buyer'])['outstanding_capital']
                 if outstanding:
                     st.warning(t('Already exposed to this buyer') + ' · ' + euro(outstanding))
                 st.caption(invoice['reference'])
-                st.button(t('View invoice details'), key='dossier_' + identifier,
-                    on_click=open_dossier, args=(entry, navigate), use_container_width=True)
+                st.button(t('Review this financing'), key='dossier_' + identifier,
+                    on_click=open_dossier, args=(entry, navigate), use_container_width=True, type='primary')
         with st.expander(t('Demo data and unavailable offers')):
             st.caption(t('Restore missing fictional examples from the 30-invoice catalog without replacing saved invoices.'))
             if st.button(t('Restore demo examples'), key='investor_add_examples'):
@@ -224,6 +276,8 @@ def render_investor(page, invoices, database, t, euro, navigate):
     hidden = sum(identifier not in {e['invoice']['id'] for e in visible} for identifier in selected)
     if hidden:
         st.info(t('{count} selected invoices are hidden by your filters.', count=hidden))
+    if page == 'Overview' and not chosen:
+        return
     left, right = st.columns([2, 1])
     with left:
         comparison(chosen, invoices, budget, t, euro)

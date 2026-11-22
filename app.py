@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import base64
 import json
 import os
 from copy import deepcopy
@@ -12,7 +13,7 @@ from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
 from engine import seed, new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
-from investor_ui import render_investor
+from investor_ui import render_investor, render_portfolio_summary
 from demo_catalog import catalog_examples
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 language = st.sidebar.radio('Language / Langue', ['EN', 'FR'], horizontal=True, key='language')
@@ -210,7 +211,13 @@ def future_value_panel(invoice):
         st.info(t('Interest calculation stopped on the recorded payment date.'))
 
 with st.sidebar:
-    st.title(t('InvoiceFlow ↗'))
+    logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
+    logo_data = base64.b64encode(logo_path.read_bytes()).decode('ascii')
+    st.markdown(
+        '<div style="background:#fff;border-radius:12px;padding:12px;overflow:hidden;margin:8px 0 16px">'
+        '<img alt="InvoiceFlow" src="data:image/png;base64,' + logo_data + '" '
+        'style="display:block;width:100%;aspect-ratio:4/1;object-fit:cover;object-position:center">'
+        '</div>', unsafe_allow_html=True)
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
     profile = st.selectbox(t('Demo role'), ['SME', 'Buyer', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Buyer', 'Investor']), on_change=change_workspace)
     workspace = WORKSPACES[profile]
@@ -386,11 +393,12 @@ elif page == 'Financing':
             i = next((i for i in items if i['id'] == selected))
             detail(i)
             st.caption(t('Demo requirements: buyer confirmation, identity and documents declared verified, a future due date and a score ≥ 65/100.'))
-            method = st.radio(t('Pricing method'), ['Risk-based pricing', 'Manual assumptions'],
-                              format_func=t, key='ui_pricing_method')
-            report = None
-            recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
-            coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
+            with st.expander(t('Financing options'), expanded=False):
+                method = st.radio(t('Pricing method'), ['Risk-based pricing', 'Manual assumptions'],
+                                  format_func=t, key='ui_pricing_method')
+                report = None
+                recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
+                coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
             if method == 'Risk-based pricing':
                 report = pricing_controls(i, t, euro, invoices)
                 ready = bool(report and report['acceptable'])
@@ -459,6 +467,8 @@ elif page == 'Simulator':
     b.metric(t('Hypothetical annual fee revenue'), euro(count * result['fee'] * 12))
     st.caption(t('At constant volume, before all expenses. This simulation is not a business forecast.'))
 elif page == 'Portfolio':
+    if profile == 'Investor':
+        render_portfolio_summary(invoices, t, euro)
     st.subheader(t('Invoice and transaction tracking'))
     filter_options = sorted({i['status'] for i in invoices})
     previous_filter = st.session_state.get('ui_filter_statuses', [])
