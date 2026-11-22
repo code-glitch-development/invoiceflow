@@ -469,7 +469,7 @@ class InterfaceTests(unittest.TestCase):
         legacy = records[2]
         legacy['financing'].pop('annual_interest_rate')
         legacy['financing'].pop('financed_on')
-        InvoiceStore(os.environ['INVOICEFLOW_DB_PATH']).initialize(records)
+        InvoiceStore(os.environ['INVOICEFLOW_DB_PATH']).reset(records)
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
         at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
