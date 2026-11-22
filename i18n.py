@@ -1155,6 +1155,22 @@ FR.update({
 })
 
 
+FR.update({
+    'Projected gross portfolio return': 'Rendement brut global projeté',
+    'Average annual rate on unpaid invoices': 'Taux annuel moyen des encours',
+    'Total capital advanced': 'Total des avances versées',
+    'Projected total gross gain': 'Gain brut total projeté',
+    'Realized gross return (simulation)': 'Rendement brut réalisé (simulation)',
+    'Portfolio performance details': 'Détail de la performance du portefeuille',
+    'The global return includes paid and unpaid financed invoices, assuming full payment. It is a gross return over the operations, not an annual return.': 'Le rendement global inclut les factures financées payées et non remboursées, sous hypothèse de paiement intégral. Il s’agit du rendement brut sur les opérations, pas d’un rendement annuel.',
+    'Annual average unavailable: {count} unpaid invoices have missing or invalid financing dates.': 'Moyenne annuelle indisponible : {count} factures non remboursées ont des dates de financement manquantes ou incohérentes.',
+    '{count} overdue invoices · {capital} of unpaid capital.': '{count} factures en retard · {capital} de capital non remboursé.',
+    'Global return = (realized gross gains + potential gross gains) / total capital advanced. Realized return uses only the capital and gains of paid invoices.': 'Rendement global = (gains bruts réalisés + gains bruts potentiels) / total des avances versées. Le rendement réalisé utilise uniquement le capital et les gains des factures payées.',
+    'The annual indicator is a capital-weighted average of the original continuous rates on unpaid invoices. It is not a cash-flow IRR or a guaranteed return.': 'L’indicateur annuel est la moyenne des taux continus initiaux des factures non remboursées, pondérée par les avances. Ce n’est ni un taux de rentabilité interne des flux ni un rendement garanti.',
+    'Annual rates are derived from the saved advance, full-payment proceeds, financing date and expected payment date (or due date in manual mode). Independent theoretical-interest settings are excluded.': 'Les taux annuels sont déduits de l’avance enregistrée, du paiement intégral prévu, de la date de financement et de la date de paiement prévue (ou de l’échéance en mode manuel). Les réglages indépendants d’intérêts théoriques sont exclus.',
+})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

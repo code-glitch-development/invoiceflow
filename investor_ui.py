@@ -141,17 +141,35 @@ def comparison(chosen, portfolio, budget, t, euro):
 def render_portfolio_summary(invoices, t, euro, detailed=True):
     summary = portfolio_summary(invoices)
     st.subheader(t('Your investment portfolio'))
+    percent = lambda value: '—' if value is None else f'{value:.2f} %'
+    a, b, c = st.columns(3)
+    a.metric(t('Outstanding capital'), euro(summary['outstanding_capital']))
+    b.metric(t('Projected gross portfolio return'), percent(summary['projected_return_percent']))
+    c.metric(t('Average annual rate on unpaid invoices'), percent(summary['weighted_annual_rate_percent']))
+    st.caption(t('The global return includes paid and unpaid financed invoices, assuming full payment. It is a gross return over the operations, not an annual return.'))
+    if summary['annual_missing_count']:
+        st.info(t('Annual average unavailable: {count} unpaid invoices have missing or invalid financing dates.',
+                  count=summary['annual_missing_count']))
+    if summary['overdue_count']:
+        st.warning(t('{count} overdue invoices · {capital} of unpaid capital.',
+                     count=summary['overdue_count'], capital=euro(summary['overdue_capital'])))
     metrics = [
-        ('Outstanding capital', euro(summary['outstanding_capital'])),
+        ('Total capital advanced', euro(summary['total_capital_advanced'])),
+        ('Projected total gross gain', euro(summary['projected_gross_gain'])),
+        ('Realized gross return (simulation)', percent(summary['realized_return_percent'])),
         ('Simulated repayments received', euro(summary['repayments'])),
         ('Realized gross gains (simulation)', euro(summary['realized_gain'])),
         ('Potential gross gains on unpaid invoices', euro(summary['potential_gain'])),
         ('Capital on overdue invoices', euro(summary['overdue_capital'])),
         ('Overdue invoices', str(summary['overdue_count'])),
     ]
-    for offset in (0, 3):
-        for column, (label, value) in zip(st.columns(3), metrics[offset:offset + 3]):
-            column.metric(t(label), value)
+    with st.expander(t('Portfolio performance details')):
+        for offset in range(0, len(metrics), 3):
+            for column, (label, value) in zip(st.columns(3), metrics[offset:offset + 3]):
+                column.metric(t(label), value)
+        st.caption(t('Global return = (realized gross gains + potential gross gains) / total capital advanced. Realized return uses only the capital and gains of paid invoices.'))
+        st.caption(t('The annual indicator is a capital-weighted average of the original continuous rates on unpaid invoices. It is not a cash-flow IRR or a guaranteed return.'))
+        st.caption(t('Annual rates are derived from the saved advance, full-payment proceeds, financing date and expected payment date (or due date in manual mode). Independent theoretical-interest settings are excluded.'))
     st.caption(t('Whole saved portfolio, independent of filters. Repayments include returned capital; realized gains are counted only after simulated full payment.'))
     st.caption(t('Gains are before costs and losses. Potential gains assume full payment of every unpaid financed invoice, including incidents. Theoretical interest and hypothetical insurance are excluded.'))
     if not detailed:

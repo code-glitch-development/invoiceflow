@@ -235,3 +235,28 @@ The manual simulator separately sets a one-off fee and a theoretical annual
 interest assumption. Those independent inputs do not establish consistent
 contractual cash flows, and theoretical interest must never be added to the
 invoice repayment or presented as collected income.
+
+### Portfolio return dashboard
+
+Portfolio highlights outstanding capital, projected gross return across all paid
+and unpaid financed operations, and the capital-weighted annual continuous rate
+of unpaid financings. Supporting metrics and formulas are under Portfolio
+performance details. Overdue counts and capital remain visible as an alert.
+
+- Projected return = (realized gross gains + full-payment potential gross gains)
+  / cumulative capital advanced on those financed operations. This is not an
+  annualised account return and does not assume reinvestment.
+- Realized return uses only the gross gain and original advances of paid invoices.
+- The annual indicator averages the original continuous cash-flow rates of unpaid
+  invoices, weighted by their advances. Each rate uses the saved financing date
+  and expected collection date, or invoice due date for manual financings. It
+  does not use the independent annual-interest sandbox setting and does not
+  increase merely because today's date moves forward. It is not portfolio XIRR.
+- If any unpaid financing lacks valid dates, the annual average is unavailable,
+  with a count of incomplete records; it never silently reports a partial average.
+  Empty returns display a dash; a valid zero-gain investment displays 0%.
+
+All figures are gross and simulated. Potential returns assume full collection,
+including for incident invoices; they exclude unrecorded recoveries, hypothetical
+insurance and exponential theoretical interest. They do not establish net
+profitability or calibrated risk-adjusted performance.

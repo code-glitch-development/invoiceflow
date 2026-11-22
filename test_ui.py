@@ -191,6 +191,11 @@ class InterfaceTests(unittest.TestCase):
             values = {m.label: m.value for m in at.metric}
             self.assertEqual(values[translate('Realized gross gains (simulation)')], monetary(summary['realized_gain']))
             self.assertEqual(values[translate('Overdue invoices')], str(summary['overdue_count']))
+            self.assertEqual(values[translate('Projected gross portfolio return')],
+                             f"{summary['projected_return_percent']:.2f} %")
+            self.assertEqual(values[translate('Average annual rate on unpaid invoices')],
+                             f"{summary['weighted_annual_rate_percent']:.2f} %")
+            self.assertTrue(any(e.label == translate('Portfolio performance details') for e in at.expander))
             at.sidebar.radio(key='ui_navigation').set_value('Overview').run()
 
     def test_guided_single_invoice_financing_without_editing_technical_inputs(self):
