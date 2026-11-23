@@ -43,7 +43,7 @@ The demo role selector opens a distinct workspace and returns to its overview:
 Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
 
 1. Open **SME → Overview**. New workspaces start empty; upload or enter your own invoice to begin.
-2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**. New invoices have pending identity/document review; suppliers cannot approve their own checks.
+2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. New invoices have pending identity/document review; suppliers cannot approve their own checks.
 3. Select **SME → Buyer confirmation**. Enter a recipient email and prepare the mail. Send it from your own mail composer, open its link in another browser window, enter a name and confirm the invoice. Return to the SME page and refresh the response.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
 5. Open **Portfolio** to export CSV or JSON, and simulate late payment, a dispute, insolvency or full payment.
@@ -51,7 +51,7 @@ Each overview has its own headline, primary action and invoice queue. Guided nex
 
 The **Invoice progress** view shows Submitted → Confirmed → Eligible → Financed → Paid. Its next-step button opens the right role, page and invoice automatically. Select any invoice in Overview or Portfolio to resume its journey.
 
-The **Invoice checks** page is read-only for the SME and shows identity/document review status. The supplier self-verification checkboxes and save-checks action have been removed from upload and review pages. New invoice identity/document flags start false, even after OCR or buyer confirmation. Existing historical demo declarations are preserved and explicitly labelled as declarations, not independent verification. The prototype currently has no independent review integration or reviewer workspace: new invoices remain blocked from financing until a separate reviewer process is implemented. Buyer confirmation can still be requested before that review is complete. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Low scores, disputes and expired due dates are never bypassed.
+The **Invoice checks** page is read-only for the SME and shows identity/document review status. The supplier self-verification checkboxes and save-checks action have been removed from upload and review pages. New invoice identity/document flags start false, even after OCR or buyer confirmation. Existing historical demo declarations are preserved and explicitly labelled as declarations, not independent verification. The prototype currently has no independent review integration or reviewer workspace: new invoices remain blocked from financing until a separate reviewer process is implemented. Buyer confirmation can still be requested before that review is complete. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Disputes, missing operational checks and expired due dates remain financing blockers. The former arbitrary score threshold has been removed.
 
 The sidebar can clear the shared workspace only after an explicit deletion checkbox is selected. It never reloads sample invoices.
 
@@ -179,7 +179,7 @@ activation and a live delivery test must be completed by the account owner.
 - Duplicate detection covers the saved workspace: SIREN plus normalized reference, or an identical SHA-256 file fingerprint. It cannot detect assignments on other platforms or every modified version of an invoice.
 - SIREN validation checks the 9-digit format only, without checking company existence. New identity/document checks remain pending; financial information is still declared. Legacy identity/document declarations are historical simulation values, not proof of verification.
 - Metadata fingerprints are local SHA-256 records, without blockchain, certified timestamps or proof that a service was delivered.
-- Transparent score out of 100: financial strength 40/25/5; payment history 25/15/0; buyer confirmation 25; documents 10. Financing requires a score ≥ 65, identity and documents declared complete, buyer confirmation and a future due date. The score is not a probability of default.
+- The old 0–100 declaration score, its 65/100 threshold and the financial-strength/payment-history dropdowns have been removed. Accounting risk is evaluated from buyer statements as documented below; checkbox flags never add financial-risk points.
 - Fee = face value × fee rate. Advance = face value − fee. This remains a one-off fee; a separate annual rate powers the investor future-value simulation below. Neither value is a guaranteed return.
 - Insolvency indemnity = min(advance, face value × hypothetical coverage). Residual capital = advance − indemnity. For a €10,000 invoice, 4% fee and 80% coverage: €9,600 advanced, €8,000 hypothetical indemnity and €1,600 residual capital at risk. This differs from the €2,000 of uncovered face value.
 - Recourse is modeled as a potential claim against the SME for the residual capital after indemnification. Recovery is uncertain and does not eliminate lender exposure. No insurance coverage is assumed for disputes or fraud.
@@ -216,9 +216,70 @@ The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capi
 
 The mathematical convention is continuous compounding; see [OpenStax](https://openstax.org/books/college-algebra-corequisite-support/pages/6-1-exponential-functions). This model does not establish contractual interest, penalties, collectible debt or guaranteed payment.
 
+## Buyer accounting indicator: Altman Z-double-prime
+
+Open **SME or Investor → Buyer accounts**, select the invoice, attach the buyer's
+balance sheet and income statement in a single PDF (maximum 5 MB), and manually
+transcribe the seven required accounting values. Fields start empty. Identify
+the buyer by the name on the invoice and SIREN (format only), a complete annual
+period and source/page references. The source PDF is archived as a SQLite BLOB,
+linked by SHA-256; the invoice JSON export contains its provenance and figures,
+not the PDF bytes. The separate PDF download is available on the accounting page.
+A database reset clears both invoices and these archived financial documents.
+
+The implemented non-manufacturing variant is:
+
+`Z'' = 6.56 × (current assets − current liabilities)/assets`
+`    + 3.26 × retained earnings/assets + 6.72 × EBIT/assets`
+`    + 1.05 × book equity/total liabilities`.
+
+It has no emerging-market +3.25 intercept and is not scaled to 100. Historical
+zones are below 1.10 (distress), 1.10 through 2.60 inclusive (grey), and above 2.60
+(lower distress in this model, never a payment guarantee). Floating-point noise
+is stabilised at 12 decimal places before threshold comparison. The interface
+also exposes current ratio, equity/assets, EBIT/assets, each model ratio and its
+weighted contribution. These figures assess the buyer, not the invoice supplier.
+
+Sources: Horváthová and Mokrišová (2018), *Risk of Bankruptcy, Its Determinants
+and Models*, section 3.4, https://doi.org/10.3390/risks6040117 ; Chris Ireland's
+NYU research report (2005), appendix A, within
+https://archive.nyu.edu/jspui/bitstream/2451/26400/2/FIN-05-001.pdf . These sources
+are linked in the app. No accuracy claim for current French SMEs is made.
+
+The V1 restricts this indicative model to non-financial, non-manufacturing
+companies with complete annual accounts. Missing accounts/values, incompatible
+scope, an invalid period, wrong named buyer, unreadable PDF, zero/non-positive
+model denominators or inconsistent balance sheet produce **Risk not assessed**,
+not a zero score or a favourable default. Negative equity, EBIT and retained
+losses are permitted. Balance-sheet identity has a EUR 1 rounding tolerance.
+The freshness ceiling of 548 days is an explicit V1 data policy, not a published
+Altman coefficient or a universal accounting rule. A previously valid assessment
+becomes unassessed for current use when it ages beyond that ceiling.
+
+Retained earnings must be reconciled as accumulated retained profits/losses,
+excluding contributed capital/share premium; EBIT must be reconciled before
+interest and tax, not copied from EBITDA or net profit. Ask the accountant if
+mapping a French statement is ambiguous. All amounts use EUR, not thousands.
+The code validates arithmetic and provenance fields, not document authenticity,
+company identity, source accuracy or sector suitability beyond the declaration.
+No accounting OCR, official rating API or independent credit analyst is claimed.
+Use public or anonymised statements in the shared academic workspace.
+
+A financial indicator neither approves identity/documents nor calibrates PD,
+LGD or funding costs. No default yield is shown for an unassessed buyer. Even an
+assessed buyer receives no automatic yield: the older scenario-pricing sandbox
+is available only after the user explicitly enables fictional pricing. Its colour
+badges describe pricing scenarios, distinct from the document-based accounting
+zone. A documented, validated pricing/credit model is still required for a real
+financing offer. Operational eligibility checks remain separate. Existing
+financings keep their amounts and saved assumptions; new financings with an
+accounting indicator snapshot its inputs/result for audit without changing rates.
+No sample accounts are generated or loaded into production data. Synthetic
+statement inputs exist only in tests, clearly marked as fixtures.
+
 ## Risk-sensitive pricing
 
-Open **Investor → Financing**. Default risk pricing now starts with an **internal fictional annual cohort**: four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the demo score or declared payment-history dropdown does not automatically assign a buyer to a cohort.
+Open **Investor → Financing**. No yield is proposed without usable buyer accounts. Even after an accounting assessment, pricing simulations require explicit opt-in. The optional **internal fictional annual cohort** uses four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the accounting score is never converted to a cohort or PD.
 
 The screen shows numerator, denominator, annual period and data origin. PD and cohort provenance are read-only; costs and recovery assumptions remain adjustable. Cohort counts/version are checked on pricing and saved in the JSON report. Switching to manual PD inputs permits explicit alternative assumptions; missing inputs/source still block funding. No credit-data provider or external API is required for the default demonstration.
 

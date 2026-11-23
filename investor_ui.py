@@ -6,15 +6,16 @@ import pandas as pd
 import streamlit as st
 from engine import buyer_outstanding_capital, canonical, money
 from portfolio import holding_yield_percent, portfolio_summary
+from financial_risk import assess_buyer
 from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities,
                            filtered, review_selection, review_fingerprint)
 
 
 # These are the existing fictional scenarios, not PD thresholds or credit ratings.
 RISK_COLORS = {
-    'Prudent': ('Lower simulated risk', '#166534', '#dcfce7'),
-    'Central': ('Moderate simulated risk', '#92400e', '#fef3c7'),
-    'Stressed': ('Higher simulated risk', '#991b1b', '#fee2e2'),
+    'Prudent': ('Prudent pricing scenario', '#166534', '#dcfce7'),
+    'Central': ('Central pricing scenario', '#92400e', '#fef3c7'),
+    'Stressed': ('Stressed pricing scenario', '#991b1b', '#fee2e2'),
 }
 
 
@@ -105,7 +106,7 @@ def comparison(chosen, portfolio, budget, t, euro):
     if not chosen:
         st.info(t('Select up to three invoices to compare them.'))
         return
-    criteria = ['Buyer', 'Simulated risk level', 'Capital to advance', 'Payment horizon', 'Gross annual yield (continuous, %)',
+    criteria = ['Buyer', 'Pricing scenario', 'Capital to advance', 'Payment horizon', 'Gross annual yield (continuous, %)',
                 'Gross return over the operation (%)',
                 'One-year buyer probability of default (%)', 'Nominal LGD before time discount (%)',
                 'Full-payment proceeds', 'Potential gross gain', 'Existing buyer exposure']
@@ -207,12 +208,12 @@ def render_investor(page, invoices, database, t, euro, navigate):
     .offer-scenario {border-radius:20px;padding:5px 10px;font-size:.8rem;font-weight:600;display:inline-block}
     .risk-legend {display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
     </style>''', unsafe_allow_html=True)
-    st.markdown('<span class="investor-badge">' + escape(t('SIMULATION · FICTIONAL DATA')) + '</span>', unsafe_allow_html=True)
+    st.markdown('<span class="investor-badge">' + escape(t('FINANCING SIMULATION')) + '</span>', unsafe_allow_html=True)
     st.title(t('Choose your next financing opportunities') if page == 'Overview' else t('Compare your selection'))
     st.caption(t('Compare capital, payment horizons and scenarios before simulating an investment.'))
     st.caption(t('Pricing uses fictional risk assumptions and fixed costs, not a market quote. Annualised rates can be high for small amounts or short durations.'))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
-    st.markdown('<div class="risk-legend" aria-label="' + escape(t('Simulated risk level')) + '">' +
+    st.markdown('<div class="risk-legend" aria-label="' + escape(t('Pricing scenario')) + '">' +
                 ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
     st.caption(t('Colours describe the selected fictional scenario, not a verified credit rating.'))
     if page == 'Overview':
@@ -230,7 +231,13 @@ def render_investor(page, invoices, database, t, euro, navigate):
         scenario = c.selectbox(t('Scenario'), ['All'] + list(SCENARIOS), format_func=t, key='inv_scenario')
         d.button(t('Reset filters'), on_click=reset_filters, use_container_width=True)
     st.session_state.investor_filters = dict(inv_budget=budget, inv_horizon=horizon, inv_scenario=scenario)
-    entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs'))
+    unassessed = [i for i in invoices if assess_buyer(i)['value'] is None and not i.get('financing')]
+    if unassessed:
+        st.info(t('Return not calculated for {count} invoices: buyer accounting risk is not assessed.', count=len(unassessed)))
+    use_scenario = st.checkbox(t('Use an explicitly fictional pricing scenario for this demonstration'), key='allow_illustrative_pricing')
+    if not use_scenario:
+        st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
+    entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs')) if use_scenario else []
     available = {e['invoice']['id']: e for e in entries if e['report']['acceptable']}
     previous = st.session_state.get('investor_selection', [])
     selected = [identifier for identifier in previous if identifier in available]
@@ -263,6 +270,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
                 st.markdown('<div class="offer-buyer">' + escape(t('Buyer')) + ' · ' + escape(invoice['buyer']) + '</div>' +
                     risk_badge(entry['scenario'], t) +
                     '<div class="offer-amount">' + escape(euro(report['advance'])) + '</div>', unsafe_allow_html=True)
+                st.caption(t('Buyer accounting risk') + ' · ' + t(assess_buyer(invoice)['band']))
                 st.caption(t('Capital to advance'))
                 st.write(t('Payment horizon') + ' · ' + t('{days} days', days=report['horizon_days']))
                 st.write(t('Potential gross gain') + ' · **' + euro(report['gross_discount']) + '**')

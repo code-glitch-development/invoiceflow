@@ -14,6 +14,8 @@ from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
 from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
+from financial_risk import assess_buyer
+from financial_risk_ui import render_accounts, risk_summary
 from investor_ui import render_investor, render_portfolio_summary
 from signature_ui import render_confirmation, render_recipient
 from buyer_confirmation import validate_email
@@ -64,6 +66,8 @@ def navigate(role, target_page, invoice=None):
             route['signature_pick'] = invoice['id']
         elif target_page == 'Financing':
             route['finance_pick'] = invoice['id']
+        elif target_page == 'Buyer accounts':
+            route['accounts_pick'] = invoice['id']
         elif target_page == 'Invoice checks':
             route['checks_pick'] = invoice['id']
         elif target_page == 'Portfolio':
@@ -137,7 +141,7 @@ def euro(n):
     return f'{n:,.2f}'.replace(',', ' ').replace('.', ',') + ' €' if language == 'FR' else f'€{n:,.2f}'
 
 def table(items):
-    return localize_frame(pd.DataFrame([{'Reference': i['reference'], 'SME': i['seller'], 'Buyer': i['buyer'], 'Amount (€)': i['amount'], 'Due date': i['due'], 'Status': i['status'], 'Score /100': score(i)[0], 'Tracking': i['outcome'] or '—'} for i in items]), t)
+    return localize_frame(pd.DataFrame([{'Reference': i['reference'], 'SME': i['seller'], 'Buyer': i['buyer'], 'Amount (€)': i['amount'], 'Due date': i['due'], 'Status': i['status'], 'Buyer accounting risk': t(assess_buyer(i)['band']), 'Tracking': i['outcome'] or '—'} for i in items]), t)
 
 def pick(items, key):
     return st.selectbox(t('Invoice'), [i['id'] for i in items], key=key, index=selected_index(key, [i['id'] for i in items]), format_func=lambda value: next((f"{i['reference']} · {i['seller']} · {euro(i['amount'])}" for i in items if i['id'] == value)))
@@ -147,10 +151,11 @@ def detail(i):
     show_requirements(i)
     a, b, c = st.columns(3)
     a.metric(t('Invoice amount'), euro(i['amount']))
-    b.metric(t('Demo score'), f'{score(i)[0]} / 100')
+    risk = assess_buyer(i)
+    b.metric(t('Buyer accounting risk'), t(risk['band']))
     c.metric(t('Due date'), date.fromisoformat(i['due']).strftime('%d/%m/%Y' if language == 'FR' else '%d %b %Y'))
     with st.expander(t('Checks and audit trail')):
-        st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Awaiting review'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Awaiting review'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Demo risk assessment', 'Result': t('{p0}/100 · threshold 65', p0=score(i)[0])}]), t), hide_index=True, use_container_width=True)
+        st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Awaiting review'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Awaiting review'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Buyer accounting risk', 'Result': t(assess_buyer(i)['band'])}]), t), hide_index=True, use_container_width=True)
         st.caption(t('Identity and document checks remain demo declarations. Buyer confirmation by personal link is recorded separately.'))
         st.write(t('SHA-256 fingerprint of metadata'))
         st.code(i['record_hash'])
@@ -158,9 +163,7 @@ def detail(i):
             st.write(t('Uploaded file fingerprint'))
             st.code(i['file_hash'])
         st.caption(t('Database register, without blockchain. A fingerprint proves neither delivery of the service nor the absence of assignment on another platform.'))
-        st.write(t('Score breakdown'))
-        st.dataframe(localize_frame(pd.DataFrame([{'Criterion': k, 'Points': v} for k, v in score(i)[1].items()]), t), hide_index=True)
-        st.caption(t('Maximum 100: financial strength 40/25/5; payment history 25/15/0; confirmation 25; documents 10. This score is not a probability of default.'))
+    risk_summary(i, t)
     if i.get('buyer_confirmation'):
         response = i['buyer_confirmation']
         st.caption(t('Buyer link confirmation: {state}', state=t(response['status'])))
@@ -322,8 +325,6 @@ elif page == 'Upload an invoice':
             amount = a.number_input(t('Invoice amount (€)'), min_value=1.0, value=st.session_state.get('ui_invoice_amount', 10000.0), step=100.0, key='ui_invoice_amount')
             issued = b.date_input(t('Issue date'), value=st.session_state.get('ui_issue_date', date.today()), max_value=date.today(), key='ui_issue_date')
             due = a.date_input(t('Due date'), value=st.session_state.get('ui_due_date', date.today() + timedelta(days=60)), min_value=date.today() + timedelta(days=1), key='ui_due_date')
-            strength = b.selectbox(t('Declared buyer financial strength'), ['Strong', 'Average', 'Weak'], key='ui_declared_buyer_financial_strength', format_func=t, index=selected_index('ui_declared_buyer_financial_strength', ['Strong', 'Average', 'Weak']))
-            history = a.selectbox(t('Declared payment history'), ['On time', 'Occasional delays', 'Frequent delays'], key='ui_declared_payment_history', format_func=t, index=selected_index('ui_declared_payment_history', ['On time', 'Occasional delays', 'Frequent delays']))
             st.caption(t('The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.'))
             st.caption(t('SME identity and supporting documents await review by InvoiceFlow or its financing partner. Submitting an invoice does not verify them.'))
             submitted = st.button(t('Submit invoice'), type='primary', key='ui_submit_invoice')
@@ -332,7 +333,7 @@ elif page == 'Upload an invoice':
                 if amount is None or issued is None or due is None:
                     raise ValueError('Enter the invoice amount, issue date and due date before submitting.')
                 email = validate_email(buyer_email) if buyer_email.strip() else ''
-                item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=False, identity=False, strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
+                item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=False, identity=False, strength='Average', history='Occasional delays', file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
                 item['buyer_email'] = email
                 database.add(item)
                 st.session_state.focus_invoice = item['id']
@@ -356,6 +357,12 @@ elif page == 'Invoice checks':
         ]), t), hide_index=True, use_container_width=True)
         st.caption(t('Older demo declarations are preserved as historical data; they do not prove independent verification.'))
         detail(i)
+elif page == 'Buyer accounts':
+    if not invoices:
+        st.info(t('No invoices available.'))
+    else:
+        selected = pick(invoices, 'accounts_pick')
+        render_accounts(next(i for i in invoices if i['id']==selected), database, t)
 elif page == 'Buyer confirmation':
     items = [i for i in invoices if i.get('buyer_confirmation') or (not i.get('financing') and i['status'] != 'Closed')]
     if not items:
@@ -380,14 +387,17 @@ elif page == 'Financing':
             selected = pick(items, 'finance_pick')
             i = next((i for i in items if i['id'] == selected))
             detail(i)
-            st.caption(t('Demo requirements: buyer confirmation, identity and documents declared verified, a future due date and a score ≥ 65/100.'))
+            st.caption(t('Financing requires buyer confirmation, identity/document review and a future due date. Accounting risk is a separate financial indicator, not an approval or an interest rate.'))
             with st.expander(t('Financing options'), expanded=False):
                 method = st.radio(t('Pricing method'), ['Risk-based pricing', 'Manual assumptions'],
                                   format_func=t, key='ui_pricing_method')
                 report = None
                 recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
                 coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
-            if method == 'Risk-based pricing':
+            if assess_buyer(i)['value'] is None:
+                st.info(t('Return not calculated — risk not assessed. Add the buyer annual accounts before preparing a financing simulation.'))
+                ready = False
+            elif method == 'Risk-based pricing':
                 report = pricing_controls(i, t, euro, invoices)
                 ready = bool(report and report['acceptable'])
             else:

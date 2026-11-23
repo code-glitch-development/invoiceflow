@@ -78,6 +78,8 @@ class InvoiceStore:
     def reset(self, invoices):
         with self.transaction() as db:
             db.execute('DELETE FROM invoices')
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='buyer_account_documents'").fetchone():
+                db.execute('DELETE FROM buyer_account_documents')
             for invoice in invoices:
                 self._insert(db, invoice)
 

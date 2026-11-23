@@ -36,12 +36,10 @@ def quote(amount, rate):
 
 
 def score(invoice):
-    # Transparent educational score; no probability of default estimated.
-    points = {'Debtor financial strength (declared)': {'Strong': 40, 'Average': 25, 'Weak': 5}[invoice['strength']],
-              'Payment history (declared)': {'On time': 25, 'Occasional delays': 15, 'Frequent delays': 0}[invoice['history']],
-              'Buyer confirmation': 25 if invoice['buyer_status'] == 'Confirmed' else 0,
-              'Complete documents (declared)': 10 if invoice['documents'] else 0}
-    return sum(points.values()), points
+    """Compatibility accessor: no synthetic 0-100 points or checkbox bonuses."""
+    from financial_risk import assess_buyer
+    report = assess_buyer(invoice)
+    return report['value'], report.get('components', {})
 
 
 def new_invoice(invoices, *, seller, siren, buyer, reference, amount, issued, due,
@@ -70,7 +68,6 @@ def new_invoice(invoices, *, seller, siren, buyer, reference, amount, issued, du
 
 def financing_checks(i):
     """One source of truth for eligibility and its human-readable explanations."""
-    value, _ = score(i)
     processed = i['status'] in ('Financed', 'Closed') or i.get('financing') is not None
     disputed = i['buyer_status'] == 'Disputed' or i['status'] == 'Disputed'
     return [
@@ -83,8 +80,6 @@ def financing_checks(i):
          'Supporting documents are incomplete: invoice, purchase order or proof of delivery.'),
         ('Future due date', date.fromisoformat(i['due']) > date.today(),
          'The due date has been reached or has passed.'),
-        ('Demo score at least 65/100', value >= 65,
-         'The demo score is below 65/100. Manual review is required; financing stays blocked.'),
         ('Invoice approval', i['status'] == 'Approved',
          'Invoice approval is incomplete.'),
     ]
@@ -135,6 +130,10 @@ def finance(i, rate, recourse, coverage, annual_interest_rate=0.0, financed_on=N
     i.update(status='Financed', financing={**quote(i['amount'], rate), 'rate': rate,
              'recourse': recourse, 'coverage': coverage, 'financed_on': start.isoformat(),
              'annual_interest_rate': float(annual_interest_rate)})
+    from financial_risk import assess_buyer
+    accounting = assess_buyer(i)
+    if accounting['value'] is not None:
+        i['financing']['accounting_indicator_at_financing'] = accounting
 
 
 def configure_interest(i, annual_interest_rate, financed_on, paid_on=None):
@@ -160,6 +159,9 @@ def configure_interest(i, annual_interest_rate, financed_on, paid_on=None):
 
 def finance_with_risk_pricing(i, assumptions, recourse, coverage):
     """Reprice from current invoice data on save; never trust a client-side quote."""
+    from financial_risk import assess_buyer
+    if assess_buyer(i)['value'] is None:
+        raise ValueError('Return not calculated — risk not assessed. Add the buyer annual accounts before preparing a financing simulation.')
     report = price_invoice(i, assumptions)
     if not report['acceptable']:
         raise ValueError('The risk-pricing quote is blocked by the configured policy.')

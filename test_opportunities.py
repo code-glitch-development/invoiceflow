@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from engine import seed, confirm, canonical
+from test_financial_risk import with_accounts
 from opportunities import (opportunities, extra_examples, filtered, review_selection,
                            review_fingerprint, assumptions_for)
 from storage import InvoiceStore, StorageError
@@ -16,6 +17,7 @@ class OpportunityTests(unittest.TestCase):
         self.store = InvoiceStore(Path(self.directory.name) / 'demo.db')
         initial = seed()
         initial += extra_examples(initial)
+        initial = [with_accounts(i) for i in initial]
         self.store.initialize(initial)
         self.records = self.store.load()
         self.entries = opportunities(self.records)

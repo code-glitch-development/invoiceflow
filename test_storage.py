@@ -39,7 +39,8 @@ class PersistenceTests(unittest.TestCase):
 
     def test_risk_pricing_report_survives_reopening(self):
         from test_risk_pricing import assumptions
-        invoice = self.store.load()[0]
+        from test_financial_risk import with_accounts
+        invoice = with_accounts(self.store.load()[0])
         finance_with_risk_pricing(invoice, assumptions(), False, 80)
         saved = self.store.update(invoice)
         reopened = InvoiceStore(self.path).load()[0]

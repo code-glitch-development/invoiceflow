@@ -4,7 +4,7 @@ from engine import eligible
 
 WORKSPACES = {
     'SME': {
-        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer confirmation', 'Portfolio'],
+        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer accounts', 'Buyer confirmation', 'Portfolio'],
         'title': 'SME workspace',
         'headline': 'Turn your invoices into cash flow.',
         'description': 'Submit an invoice, complete its file and follow its financing.',
@@ -14,7 +14,7 @@ WORKSPACES = {
         'steps': ['Upload an invoice', 'Invoice review status', 'Invoice and transaction tracking'],
     },
     'Investor': {
-        'pages': ['Overview', 'Compare opportunities', 'Portfolio', 'Simulation assumptions', 'Financing', 'Simulator'],
+        'pages': ['Overview', 'Compare opportunities', 'Portfolio', 'Simulation assumptions', 'Buyer accounts', 'Financing', 'Simulator'],
         'title': 'Investor workspace',
         'headline': 'Explore eligible invoices.',
         'description': 'Review eligibility, simulate an advance and track your portfolio.',

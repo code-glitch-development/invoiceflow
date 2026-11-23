@@ -6,6 +6,7 @@ import math
 from datetime import timedelta
 
 from demo_pd import demo_cohort
+from financial_risk import assess_buyer
 from engine import canonical, eligible, new_invoice, confirm, money
 from future_value import valuation_today
 from risk_pricing import price_invoice
@@ -39,7 +40,7 @@ def assumptions_for(scenario, costs=None):
 def opportunities(invoices, assignments=None, costs=None):
     result = []
     for invoice in invoices:
-        if not eligible(invoice):
+        if not eligible(invoice) or assess_buyer(invoice)['value'] is None:
             continue
         scenario = buyer_scenario(invoice['buyer'], assignments or {})
         report = price_invoice(invoice, assumptions_for(scenario, costs))

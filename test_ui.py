@@ -26,11 +26,15 @@ class InterfaceTests(unittest.TestCase):
         store.remove_builtin_demo_invoices()
         records = seed()
         records += catalog_examples(records)
-        store.reset(records)
+        from test_financial_risk import with_accounts
+        store.reset([with_accounts(i) for i in records])
 
     def app(self):
         from streamlit.testing.v1 import AppTest
-        return AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20).run()
+        app = AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20)
+        # Existing pricing regression tests explicitly opt in to fictional scenarios.
+        app.session_state['allow_illustrative_pricing'] = True
+        return app.run()
 
     def test_new_workspace_stays_empty_without_example_restore_actions(self):
         import os
@@ -274,6 +278,71 @@ class InterfaceTests(unittest.TestCase):
             self.assertEqual(len(at.checkbox), 1)  # only the sidebar workspace deletion control
             self.assertFalse(any(b.label in ('Save invoice checks','Enregistrer les contrôles') for b in at.button))
             self.assertEqual(at.session_state['invoices'], before)
+
+    def test_unassessed_buyer_has_no_default_quote_or_old_score_inputs(self):
+        import os
+        from storage import InvoiceStore
+        store=InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        invoice=store.load()[0]
+        invoice.pop('buyer_accounts',None)
+        store.update(invoice)
+        at=self.app()
+        at.sidebar.radio(key='ui_navigation').set_value('Upload an invoice').run()
+        self.assertFalse(any(w.key in ('ui_declared_buyer_financial_strength','ui_declared_payment_history') for w in at.selectbox))
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.selectbox(key='finance_pick').set_value(invoice['id']).run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        self.assertFalse(any(m.label in ('Demo score','Model maximum advance','Calculated annual continuous rate (%)') for m in at.metric))
+        self.assertTrue(any('Return not calculated' in x.value for x in at.info))
+
+    def test_accounting_model_never_enables_fictional_pricing_without_opt_in(self):
+        at=self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.checkbox(key='allow_illustrative_pricing').uncheck().run()
+        self.assertFalse(at.exception)
+        self.assertFalse(any(b.key and b.key.startswith('dossier_') for b in at.button))
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='ui_simulate_financing').disabled)
+        self.assertFalse(any(m.label=='Model maximum advance' for m in at.metric))
+
+    def test_accounting_page_saves_source_pdf_and_computes_published_indicator(self):
+        import os
+        from io import BytesIO
+        from datetime import date,timedelta
+        from storage import InvoiceStore
+        from financial_risk import statement_document
+        from test_extraction import text_pdf
+        from test_financial_risk import fixture_accounts
+        store=InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        invoice=next(i for i in store.load() if not i.get('financing'))
+        invoice.pop('buyer_accounts',None);store.update(invoice)
+        upload=BytesIO(text_pdf());upload.name='buyer-annual-accounts.pdf'
+        with patch('streamlit.file_uploader',return_value=upload):
+            at=self.app()
+            at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+            at.selectbox(key='accounts_pick').set_value(invoice['id']).run()
+            self.assertFalse(at.exception)
+            prefix='accounts_'+invoice['id']+'_'
+            self.assertTrue(any('Risk not assessed' in i.value for i in at.info))
+            at.text_input(key=prefix+'siren').set_value('987654321')
+            at.selectbox(key=prefix+'type').set_value('Non-financial, non-manufacturing company')
+            end=date.today()-timedelta(days=30)
+            at.date_input(key=prefix+'start').set_value(end-timedelta(days=364))
+            at.date_input(key=prefix+'end').set_value(end)
+            at.text_input(key=prefix+'reference').set_value('Test annual accounts, pages 1-2')
+            for key,value in fixture_accounts(invoice)['values'].items():
+                at.number_input(key=prefix+key).set_value(value)
+            next(b for b in at.button if b.label=='Save accounting data and calculate').click().run()
+            self.assertFalse(at.exception)
+            saved=next(i for i in store.load() if i['id']==invoice['id'])
+            self.assertEqual(statement_document(store,saved),upload.getvalue())
+            self.assertTrue(any(m.label=='Altman Z-double-prime indicator' and m.value=='3.86' for m in at.metric))
+            at.sidebar.radio(key='language').set_value('FR').run()
+            self.assertFalse(at.exception)
+            self.assertTrue(any(m.label=='Indicateur Z″ d’Altman' for m in at.metric))
 
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO

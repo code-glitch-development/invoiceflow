@@ -21,7 +21,8 @@ def assumptions():
 
 class RiskPricingTests(unittest.TestCase):
     def setUp(self):
-        self.invoice = seed()[0]
+        from test_financial_risk import with_accounts
+        self.invoice = with_accounts(seed()[0])
         self.inputs = assumptions()
 
     def test_annual_probability_is_scaled_by_survival_not_linearly(self):

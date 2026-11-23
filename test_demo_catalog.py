@@ -8,6 +8,7 @@ from demo_catalog import catalog_examples
 from engine import seed, eligible, settle
 from opportunities import opportunities, filtered, extra_examples
 from storage import InvoiceStore
+from test_financial_risk import with_accounts
 
 
 class DemoCatalogTests(unittest.TestCase):
@@ -24,7 +25,7 @@ class DemoCatalogTests(unittest.TestCase):
         self.assertEqual(len({i['key'] for i in records}), 30)
         self.assertEqual(len({i['id'] for i in records}), 30)
         self.assertEqual(sum(eligible(i) for i in records), 19)
-        self.assertGreaterEqual(len(filtered(opportunities(records), 25000, 90)), 12)
+        self.assertGreaterEqual(len(filtered(opportunities([with_accounts(i) for i in records]), 25000, 90)), 12)
         self.assertGreaterEqual(len({i['buyer'] for i in records}), 6)
         self.assertGreaterEqual(len({i['amount'] for i in records}), 20)
         self.assertGreaterEqual(len({i['due'] for i in records}), 8)

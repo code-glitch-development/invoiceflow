@@ -44,7 +44,7 @@ class WorkflowTests(unittest.TestCase):
         settle(invoice, 'Paid')
         self.assertTrue(all(done for _, done in journey(invoice)))
 
-    def test_dispute_expiry_and_low_score_have_specific_reasons(self):
+    def test_dispute_and_expiry_have_specific_reasons(self):
         args = self.args()
         args.update(strength='Weak', history='Frequent delays')
         invoice = new_invoice([], **args)
@@ -53,7 +53,7 @@ class WorkflowTests(unittest.TestCase):
         reasons = financing_blockers(invoice)
         self.assertIn('The invoice is disputed by the buyer.', reasons)
         self.assertIn('The due date has been reached or has passed.', reasons)
-        self.assertTrue(any('below 65/100' in message for message in reasons))
+        self.assertFalse(any('65/100' in message for message in reasons))
         self.assertFalse(eligible(invoice))
 
     def test_complete_workflow(self):
@@ -84,8 +84,8 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             new_invoice([i], **args, file_bytes=b'example')
 
-    def test_block_missing_checks_and_low_score(self):
-        for field, value in [('identity', False), ('documents', False), ('strength', 'Weak')]:
+    def test_block_missing_checks_without_arbitrary_financial_points(self):
+        for field, value in [('identity', False), ('documents', False)]:
             args = self.args()
             args[field] = value
             if field == 'strength':
@@ -126,3 +126,4 @@ class WorkflowTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

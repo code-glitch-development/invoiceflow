@@ -30,10 +30,18 @@ def change_pd_mode(prefix):
 
 
 def pricing_controls(invoice, t, euro, portfolio=None):
+    from financial_risk import assess_buyer
+    if assess_buyer(invoice)['value'] is None:
+        st.info(t('Return not calculated — risk not assessed. Add the buyer annual accounts before preparing a financing simulation.'))
+        return None
+    if not st.checkbox(t('Use an explicitly fictional pricing scenario for this demonstration'), key='allow_illustrative_pricing'):
+        st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
+        return None
+    st.warning(t('The following rates use fictional pricing assumptions. The accounting score does not determine their default probability or yield.'))
     prefix = 'pricing_' + invoice['id'] + '_'
     st.subheader(t('Risk-based invoice pricing'))
     with st.expander(t('Advanced pricing assumptions'), expanded=False):
-        st.caption(t('Provide one-year buyer PD, net LGD and costs. The demo score and payment-history dropdown are not converted into default probabilities.'))
+        st.caption(t('Provide one-year buyer PD, net LGD and costs. The accounting indicator is not converted into a default probability.'))
         modes = ['Internal fictional cohort', 'Manual PD inputs']
         previous_mode = st.session_state.get(prefix+'pd_mode', modes[0])
         pd_mode = st.radio(t('PD estimation mode'), modes, index=modes.index(previous_mode) if previous_mode in modes else 0,
