@@ -257,14 +257,10 @@ with st.sidebar:
         sme_company = st.selectbox(t('SME company (demo)'), options, key='ui_sme_company', format_func=lambda v: t(v) if v == ALL_SMES else v, index=selected_index('ui_sme_company', options))
         st.session_state.sme_selected_company = sme_company
         apply_sme_profile(st.session_state, sme_company, sme_profiles)
-        st.caption(t('Company selection filters this demo view; it is not a secure login.'))
-        st.caption(t('Demo profiles do not create invoices. Their prefilled SIREN values are fictional test identifiers.'))
-        st.caption(t('Changing SME profile clears the unsaved upload draft.'))
     if profile == 'Buyer':
         companies = sorted(set(BUYER_PROFILES) | {i['buyer'] for i in invoices})
         if companies:
             buyer_company = st.selectbox(t('Buyer company (demo)'), companies, key='ui_buyer_company', index=selected_index('ui_buyer_company', companies))
-        st.caption(t('Company selection filters this demo view; it is not a secure login.'))
     workspace = WORKSPACES[profile]
     pages = workspace['pages']
     page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
