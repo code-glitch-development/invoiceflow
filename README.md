@@ -541,7 +541,7 @@ production documents in this shared academic prototype.
 The buyer can confirm or dispute an invoice, supply a representative name and
 an acceptance declaration (or a dispute reason), and upload/review annual
 accounts through the existing PDF extraction and Z-double-prime workflow.
-Accounts remain attached to the selected invoice dossier. The buyer tracking
+The buyer workspace stores accounts on the company profile, even without an invoice. SME/investor dossier views retain invoice-specific assessments. The buyer tracking
 view shows invoices payable; the supplier bears the financing cost and platform
 commission. No new identity or document-review approval is inferred from these
 actions, and providing accounts does not guarantee future payment.
@@ -618,3 +618,27 @@ grey for unassessed. An unknown risk never receives the green treatment. These
 colours do not claim a calibrated default probability. Model inputs, rates,
 commission, example isolation and the distress/manual-review restriction remain
 unchanged; illustrative source PDFs retain their provenance.
+
+
+## Buyer company accounts without an invoice
+
+**Buyer → Buyer accounts** now always displays the annual-accounts upload form
+for the selected company, including an empty company with no supplier invoice.
+The same local extraction, review, calendar checks, seven-input validation and
+Altman indicator are reused. Company-level screens do not invent an invoice
+amount or maturity for a tariff preview. The source PDF and reviewed figures
+are archived together in `buyer_profiles` / `buyer_profile_documents`, separate
+from the invoice ledger; these tables are created automatically on the first save.
+
+Profile accounts are copied, with their PDF and profile version, to matching
+unassessed invoices and to future invoices on reload. Only copies already linked
+to that profile are refreshed when its accounts change. Explicit invoice-specific
+assessments and financed/closed operations keep their original data and terms.
+Buyer matching remains based on normalized company names in this unauthenticated
+workspace, not an independently verified company identity. Source hashes and
+optimistic versions are checked; invalid/obsolete profiles are not propagated.
+
+Previous invoice assessments remain accessible through a toggle on the buyer
+accounts page, and through their SME/investor dossier. Clearing the whole
+workspace also clears profile accounts and source documents. No fabricated
+invoice or manual migration is needed to upload company accounts.

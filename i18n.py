@@ -3098,6 +3098,8 @@ FR.update({'Colours indicate the pricing category, not a verified credit rating.
 
 FR.update({'Demonstration portfolio': 'Portefeuille de démonstration', 'Independent from your uploaded invoices and saved portfolio.': 'Indépendant de vos factures importées et de votre portefeuille enregistré.', 'Simulation completed. Your saved portfolio is unchanged.': 'Simulation terminée. Votre portefeuille enregistré reste inchangé.'})
 
+FR.update({'Company annual accounts: {buyer}': 'Comptes annuels de l’entreprise : {buyer}', 'Upload your company accounts here, even before a supplier submits an invoice. They will be available for matching invoices without an existing assessment.': 'Déposez ici les comptes de votre entreprise, même avant qu’un prestataire dépose une facture. Ils pourront être utilisés pour les factures correspondantes sans évaluation existante.', 'View existing invoice assessments': 'Consulter les évaluations des factures existantes'})
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

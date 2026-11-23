@@ -107,8 +107,8 @@ def assess_buyer(invoice, today=None):
                 document=accounts['document'], source_reference=accounts['source_reference'])
 
 
-def save_buyer_accounts(store, invoice, accounts, document_bytes=None, filename=None):
-    """Archive the PDF and structured entries together, rejecting stale/financed updates."""
+def prepare_buyer_accounts(invoice, accounts, document_bytes=None, filename=None):
+    """Validate annual figures and their source for invoice or company-level storage."""
     from copy import deepcopy
     candidate = deepcopy(accounts)
     if invoice.get('financing') or invoice['status'] == 'Closed':
@@ -130,6 +130,12 @@ def save_buyer_accounts(store, invoice, accounts, document_bytes=None, filename=
     validate_accounts(candidate, invoice['buyer'])
     candidate['entered_at'] = datetime.now(timezone.utc).isoformat()
     candidate['provenance'] = 'Local PDF/OCR-assisted transcription, reviewed by the user; authenticity and identity not independently verified' if candidate.get('extraction') else 'Manual transcription from attached PDF; authenticity and identity not independently verified'
+    return candidate
+
+
+def save_buyer_accounts(store, invoice, accounts, document_bytes=None, filename=None):
+    """Archive the PDF and structured entries together, rejecting stale/financed updates."""
+    candidate = prepare_buyer_accounts(invoice, accounts, document_bytes, filename)
     with store.transaction() as db:
         row = db.execute('SELECT payload, version FROM invoices WHERE id = ?', (invoice['id'],)).fetchone()
         if row is None or row[1] != invoice.get('_version'):

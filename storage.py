@@ -80,6 +80,9 @@ class InvoiceStore:
             db.execute('DELETE FROM invoices')
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='buyer_account_documents'").fetchone():
                 db.execute('DELETE FROM buyer_account_documents')
+            for table in ('buyer_profiles', 'buyer_profile_documents'):
+                if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
+                    db.execute('DELETE FROM ' + table)
             for invoice in invoices:
                 self._insert(db, invoice)
 

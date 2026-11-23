@@ -24,6 +24,7 @@ from signature_ui import render_confirmation, render_recipient
 from buyer_confirmation import validate_email
 from buyer_workspace import BUYER_PROFILES, buyer_invoices, render_buyer_confirmation
 from sme_profiles import ALL_SMES, company_profiles, sme_invoices, apply_sme_profile, validate_sme_submission
+from buyer_account_profiles import load_buyer_profile, save_buyer_profile_accounts, profile_statement_document, sync_buyer_profile_accounts
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -43,6 +44,7 @@ try:
     database.initialize(initial)
     database.remove_builtin_demo_invoices()
     remove_auto_supplier_batch(database)
+    sync_buyer_profile_accounts(database)
     invoices = database.load()
     st.session_state.invoices = invoices
 except StorageError as exc:
@@ -394,7 +396,17 @@ elif page == 'Invoice checks':
         st.caption(t('Older demo declarations are preserved as historical data; they do not prove independent verification.'))
         detail(i)
 elif page == 'Buyer accounts':
-    if not invoices:
+    if profile == 'Buyer' and buyer_company:
+        company_accounts = load_buyer_profile(database, buyer_company)
+        st.caption(t('Upload your company accounts here, even before a supplier submits an invoice. They will be available for matching invoices without an existing assessment.'))
+        render_accounts(company_accounts, database, t, save_accounts=save_buyer_profile_accounts,
+                        load_document=profile_statement_document, company_mode=True)
+        assessed = [i for i in invoices if i.get('buyer_accounts')]
+        if assessed:
+            if st.toggle(t('View existing invoice assessments'), key='buyer_invoice_accounts_'+company_accounts['id']):
+                selected = pick(assessed, 'accounts_pick')
+                render_accounts(next(i for i in assessed if i['id']==selected), database, t)
+    elif not invoices:
         st.info(t('No invoices available.'))
     else:
         selected = pick(invoices, 'accounts_pick')

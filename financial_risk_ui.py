@@ -41,17 +41,18 @@ def risk_summary(invoice, t):
     return result
 
 
-def render_accounts(invoice, store, t):
+def render_accounts(invoice, store, t, *, save_accounts=save_buyer_accounts,
+                    load_document=statement_document, company_mode=False):
     from accounting_extraction import apply_accounts_upload, restore_saved_accounts
     from accounting_dates import latest_accounts_check
     from hashlib import sha256
     from copy import deepcopy
     st.header(t('Buyer annual accounts'))
-    st.write(t('Assess the company that owes the invoice: {buyer}',buyer=invoice['buyer']))
+    st.write(t('Company annual accounts: {buyer}' if company_mode else 'Assess the company that owes the invoice: {buyer}',buyer=invoice['buyer']))
     st.caption(t('The PDF is read locally, with OCR for scanned pages. Prefilled figures are proposals to review, not authenticated financial data.'))
     st.caption(t('Documents are shared across app visitors. Upload only documents you are allowed to share.'))
     previous=invoice.get('buyer_accounts',{})
-    archived=statement_document(store,invoice)
+    archived=load_document(store,invoice)
     if archived:
         st.download_button(t('Download source annual accounts'),archived,
             file_name=previous['document']['filename'],mime='application/pdf',key='accounts_source_'+invoice['id'])
@@ -117,11 +118,12 @@ def render_accounts(invoice, store, t):
     preview=deepcopy(accounts);preview.update(document=metadata,extraction_reviewed=True)
     st.markdown('**'+t('Provisional accounting indicator — save reviewed data before financing')+'**')
     risk_summary(dict(invoice,buyer_accounts=preview),t)
-    with st.expander(t('Provisional tariff from these accounting figures')):
-        from altman_tariff_ui import tariff_controls
-        tariff_controls(dict(invoice,buyer_accounts=preview if metadata else None),t,lambda amount:f'{amount:,.2f} EUR')
+    if not company_mode:
+        with st.expander(t('Provisional tariff from these accounting figures')):
+            from altman_tariff_ui import tariff_controls
+            tariff_controls(dict(invoice,buyer_accounts=preview if metadata else None),t,lambda amount:f'{amount:,.2f} EUR')
     if st.button(t('Save accounting data and calculate'),type='primary',key=prefix+'save'):
         try:
-            save_buyer_accounts(store,invoice,accounts,document.getvalue() if document else None,document.name if document else None)
+            save_accounts(store,invoice,accounts,document.getvalue() if document else None,document.name if document else None)
             st.rerun()
         except ValueError as exc:st.error(t(str(exc)))

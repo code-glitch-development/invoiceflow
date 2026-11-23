@@ -446,6 +446,8 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(saved['buyer_confirmation']['method'], 'buyer_workspace_demo')
         self.assertNotIn(prefix+'attestation', [c.key for c in at.checkbox])
         at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+        from buyer_account_profiles import buyer_profile_id
+        at.toggle(key='buyer_invoice_accounts_'+buyer_profile_id('Groupe Horizon')).set_value(True).run()
         at.selectbox(key='accounts_pick').set_value(pending['id']).run()
         self.assertFalse(at.exception)
         self.assertEqual(at.text_input(key='accounts_'+pending['id']+'_entity').value, 'Groupe Horizon')
@@ -458,6 +460,7 @@ class InterfaceTests(unittest.TestCase):
         at.sidebar.selectbox(key='ui_buyer_company').set_value('Maison Atlas').run()
         at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
         self.assertFalse(at.exception)
+        at.toggle(key='buyer_invoice_accounts_'+buyer_profile_id('Maison Atlas')).set_value(True).run()
         allowed = set(at.selectbox(key='accounts_pick').options)
         self.assertNotIn(pending['id'], allowed)
         self.assertTrue(allowed)
@@ -561,6 +564,55 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(saved['status'], 'Financed')
         self.assertFalse(saved['identity'])
         self.assertFalse(saved['documents'])
+
+    def test_buyer_can_upload_company_accounts_without_any_invoice(self):
+        import os
+        from io import BytesIO
+        from datetime import timedelta
+        from buyer_account_profiles import buyer_profile_id, load_buyer_profile, profile_statement_document
+        from engine import new_invoice
+        from financial_risk import assess_buyer, statement_document
+        from future_value import valuation_today
+        from storage import InvoiceStore
+        from test_accounting_extraction import account_lines
+        from test_extraction import text_pdf
+        store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH']); store.reset([])
+        company = 'Sillage Operations SAS'
+        upload = BytesIO(text_pdf(account_lines(company))); upload.name='company-accounts.pdf'
+        with patch('streamlit.file_uploader', return_value=upload):
+            at = self.app()
+            at.sidebar.selectbox(key='ui_demo_role').set_value('Buyer').run()
+            at.sidebar.selectbox(key='ui_buyer_company').set_value(company).run()
+            at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+            self.assertFalse(at.exception)
+            prefix = 'accounts_'+buyer_profile_id(company)+'_'
+            self.assertEqual(at.text_input(key=prefix+'entity').value, company)
+            self.assertEqual(at.number_input(key=prefix+'total_assets').value, 1000000)
+            self.assertFalse(any(info.value=='No invoices available.' for info in at.info))
+            at.selectbox(key=prefix+'type').set_value('Non-financial, non-manufacturing company').run()
+            at.checkbox(key=prefix+'reviewed').check().run()
+            at.button(key=prefix+'save').click().run()
+            self.assertFalse(at.exception)
+            self.assertEqual(store.load(), [])
+            saved = load_buyer_profile(store, company)
+            self.assertEqual(profile_statement_document(store, saved), upload.getvalue())
+            self.assertAlmostEqual(assess_buyer(saved)['value'], 3.8576)
+        for language in ('FR', 'EN'):
+            at.sidebar.radio(key='language').set_value(language).run()
+            self.assertFalse(at.exception)
+            self.assertEqual(at.text_input(key=prefix+'entity').value, company)
+        invoice = new_invoice([], seller='Orbe Digital SAS', siren='234567890', buyer=company,
+            reference='AFTER-ACCOUNTS', amount=9000, issued=valuation_today(),
+            due=valuation_today()+timedelta(days=60), identity=False, documents=False,
+            strength='Average', history='On time')
+        store.add(invoice)
+        at.run()
+        self.assertFalse(at.exception)
+        attached = store.load()[0]
+        self.assertEqual(attached['buyer_accounts']['buyer_profile_id'], saved['id'])
+        self.assertEqual(statement_document(store, attached), upload.getvalue())
+        self.assertEqual(attached['buyer_status'], 'Pending')
+        self.assertFalse(attached['identity'])
 
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO
