@@ -4,7 +4,7 @@ from engine import eligible
 
 WORKSPACES = {
     'SME': {
-        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer signature', 'Portfolio'],
+        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer confirmation', 'Portfolio'],
         'title': 'SME workspace',
         'headline': 'Turn your invoices into cash flow.',
         'description': 'Submit an invoice, complete its file and follow its financing.',

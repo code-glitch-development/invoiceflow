@@ -306,58 +306,69 @@ class InterfaceTests(unittest.TestCase):
     def test_language_change_keeps_role_page(self):
         at = self.app()
         at.sidebar.selectbox(key='ui_demo_role').set_value('SME').run()
-        at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
         at.sidebar.radio(key='language').set_value('FR').run()
         self.assertFalse(at.exception)
         self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'SME')
-        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer signature')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer confirmation')
 
-    def test_signature_not_configured_is_explicit_and_cannot_send(self):
-        from signature_ui import render_signature
-        from engine import seed
-        from streamlit.testing.v1 import AppTest
+    def test_prepare_confirmation_email_without_provider_or_credentials(self):
+        from engine import eligible
         at = self.app()
         self.assertNotIn('Buyer', at.sidebar.selectbox(key='ui_demo_role').options)
-        at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
         pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
-        at.selectbox(key='signature_pick').set_value(pending['id']).run()
+        identifier = pending['id']
+        at.selectbox(key='signature_pick').set_value(identifier).run()
+        at.text_input(key='confirmation_email_' + identifier).set_value('buyer@example.com')
+        at.text_input(key='confirmation_app_url_' + identifier).set_value('https://invoiceflow.streamlit.app/')
+        next(b for b in at.button if b.label == 'Prepare confirmation email').click().run()
         self.assertFalse(at.exception)
-        self.assertTrue(at.button(key='FormSubmitter:signature_form_' + pending['id'] + '-Send signature invitation').disabled)
-        self.assertTrue(any('not configured' in w.value for w in at.warning))
-        self.assertFalse(any(b.label == 'Save decision' for b in at.button))
+        invitation = at.session_state['confirmation_draft_' + identifier]
+        self.assertTrue(invitation['link'].startswith('https://invoiceflow.streamlit.app/?confirmation='))
+        self.assertFalse(any(w.key == 'signature_access_code' for w in at.text_input))
+        saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
+        self.assertEqual(saved['buyer_status'], 'Pending')
+        self.assertFalse(eligible(saved))
+        self.assertTrue(any('has not sent any email' in s.value for s in at.success))
+        self.assertNotIn(invitation['token'], str(saved))
+        at.sidebar.radio(key='language').set_value('FR').run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.session_state['confirmation_draft_' + identifier]['token'], invitation['token'])
 
-    def test_signature_form_sends_once_then_confirms_only_after_provider_refresh(self):
+    def test_recipient_can_confirm_without_workspace_access(self):
         import os
-        from unittest.mock import Mock
-        client = Mock(environment='sandbox')
-        client.request.side_effect = [{'id': 'request'}, {'id': 'document'}, {'id': 'signer'}, {'status': 'ongoing'}]
-        with patch.dict('os.environ', {'YOUSIGN_API_KEY': 'test-key', 'YOUSIGN_ENVIRONMENT': 'sandbox',
-                                      'SIGNATURE_SEND_CODE': 'private-demo-code'}), patch('signature_ui.YousignClient', return_value=client):
-            at = self.app()
-            at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
-            pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
-            identifier = pending['id']
-            at.selectbox(key='signature_pick').set_value(identifier).run()
-            self.assertFalse(at.exception)
-            at.text_input(key='signature_access_code').set_value('private-demo-code').run()
-            at.text_input(key='signature_email_' + identifier).set_value('buyer@example.com')
-            at.text_input(key='signature_first_' + identifier).set_value('Jane')
-            at.text_input(key='signature_last_' + identifier).set_value('Doe')
-            at.checkbox(key='signature_consent_' + identifier).check()
-            next(b for b in at.button if b.label == 'Send signature invitation').click().run()
-            self.assertFalse(at.exception)
-            saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
-            self.assertEqual(saved['buyer_status'], 'Pending')
-            self.assertEqual(saved['signature']['state'], 'ongoing')
-            self.assertFalse(any(b.label == 'Send signature invitation' for b in at.button))
-            client.request.side_effect = None
-            client.request.return_value = {'id': 'request', 'status': 'done',
-                                           'signers': [{'id': 'signer', 'status': 'signed'}]}
-            at.button(key='signature_refresh_' + identifier).click().run()
-            self.assertFalse(at.exception)
-            saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
-            self.assertEqual(saved['buyer_status'], 'Confirmed')
-            self.assertEqual(saved['signature']['state'], 'done')
+        from buyer_confirmation import create_invitation
+        from storage import InvoiceStore
+        at = self.app()
+        pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
+        store = InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        invitation = create_invitation(store, pending['id'], 'buyer@example.com', 'https://example.streamlit.app/')
+        at.query_params['confirmation'] = invitation['token']
+        at.run()
+        self.assertFalse(at.exception)
+        self.assertEqual(len(at.sidebar.selectbox), 0)
+        self.assertEqual(len(at.dataframe), 0)
+        self.assertFalse(any(b.label in ('Export view as CSV','Export saved invoices as JSON') for b in at.get('download_button')))
+        at.text_input(key='buyer_response_name').set_value('Jane Buyer')
+        at.checkbox(key='buyer_response_attestation').check()
+        next(b for b in at.button if b.label == 'Submit my response').click().run()
+        self.assertFalse(at.exception)
+        self.assertTrue(any('response has been recorded' in s.value for s in at.success))
+        saved = next(i for i in store.load() if i['id'] == pending['id'])
+        self.assertEqual(saved['buyer_status'], 'Confirmed')
+        self.assertEqual(saved['buyer_confirmation']['respondent_name'], 'Jane Buyer')
+        self.assertFalse(any(b.label == 'Submit my response' for b in at.button))
+
+    def test_invalid_recipient_link_never_falls_back_to_shared_workspace(self):
+        at = self.app()
+        at.query_params['confirmation'] = 'invalid'
+        at.run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.error)
+        self.assertEqual(len(at.sidebar.selectbox),0)
+        self.assertEqual(len(at.dataframe),0)
+        self.assertEqual(len(at.button),0)
 
     def test_financing_and_payment(self):
         at = self.app()
@@ -548,10 +559,10 @@ class InterfaceTests(unittest.TestCase):
         # The second sample awaits buyer confirmation.
         invoice = at.session_state['invoices'][1]
         at.selectbox(key='overview_pick').set_value(invoice['id']).run()
-        next(b for b in at.button if b.label == 'Next: request buyer signature').click().run()
+        next(b for b in at.button if b.label == 'Next: request buyer confirmation').click().run()
         self.assertFalse(at.exception)
         self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'SME')
-        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer signature')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer confirmation')
         self.assertEqual(at.selectbox(key='signature_pick').value, invoice['id'])
 
 

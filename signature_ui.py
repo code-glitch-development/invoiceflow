@@ -1,96 +1,88 @@
-"""SME-facing signature invitation, without a buyer workspace or signing-link exposure."""
-import hmac
+"""Mail draft and a dedicated recipient page, with no external provider or credentials."""
 import os
 import streamlit as st
-from electronic_signature import (YousignClient, SignatureError, confirmation_pdf,
-                                  send_signature, refresh_signature, download_evidence)
+from buyer_confirmation import (ConfirmationError, create_invitation, email_draft,
+                                inspect_invitation, respond)
 
 
-def setting(key, default=''):
-    value = os.environ.get(key)
-    if value is not None:
-        return value
-    try:
-        return str(st.secrets.get(key, default))
-    except (FileNotFoundError, KeyError):
-        return default
-
-
-def render_signature(invoice, database, t):
-    st.subheader(t('Request the buyer signature'))
-    st.caption(t('The buyer receives an email and signs a confirmation attestation outside InvoiceFlow. No buyer account is needed.'))
-    st.caption(t('The attestation contains the invoice details and a declaration about the service, amount, due date and absence of payment or dispute. It is separate from the original invoice.'))
-    environment = setting('YOUSIGN_ENVIRONMENT', 'sandbox')
-    api_key = setting('YOUSIGN_API_KEY')
-    access_code = setting('SIGNATURE_SEND_CODE')
-    configured = bool(api_key and len(access_code) >= 12)
-    if environment == 'sandbox':
-        st.info(t('Test mode: signatures have no legal effect. Trial accounts may only email members of the Yousign organisation.'))
-    else:
-        st.caption(t('Simple electronic signature with an email verification code. This does not verify identity or authority to represent the buyer.'))
-    if not configured:
-        st.warning(t('Electronic signature is not configured. No invitation can be sent yet.'))
-        with st.expander(t('Signature service setup')):
-            st.write(t('In Streamlit secrets, add a Yousign API key, choose sandbox or production, and set a sending access code of at least 12 characters. Never paste the API key into this page.'))
-            st.code('YOUSIGN_API_KEY = "..."\nYOUSIGN_ENVIRONMENT = "sandbox"\nSIGNATURE_SEND_CODE = "..."', language='toml')
-    # This shared demo has no user accounts: protect all provider operations with an operator code.
-    authorised = False
-    if configured:
-        entered = st.text_input(t('Signature access code'), type='password', key='signature_access_code')
-        authorised = hmac.compare_digest(entered.encode(), access_code.encode())
-        if entered and not authorised:
-            st.error(t('Invalid signature access code.'))
-    record = invoice.get('signature')
+def render_confirmation(invoice, database, t, language):
+    st.subheader(t('Request buyer confirmation'))
+    st.caption(t('Prepare a personal confirmation link, then send it from your own email app. No account, API key or installation is needed.'))
+    st.caption(t('This is a confirmation by link. It does not independently verify the recipient identity or authority to represent the buyer.'))
+    record = invoice.get('buyer_confirmation')
     if record:
-        st.write(t('Signature status') + ' : **' + t(record['state']) + '**')
-        st.write(t('Recipient') + ' : ' + record['contact']['email'])
-        if record['environment'] == 'sandbox':
-            st.caption(t('This request belongs to the test environment. It is not a legally binding signature.'))
-        if record['state'] in ('needs_review', 'creating', 'draft'):
-            st.warning(t('Sending is incomplete or uncertain. Check the Yousign dashboard before any new invitation. This app blocks duplicate sends.'))
-        if st.button(t('Check signature status'), disabled=not authorised or not record.get('request_id'),
-                     key='signature_refresh_' + invoice['id']):
-            try:
-                with st.spinner(t('Checking the signature service…')):
-                    refresh_signature(database, invoice['id'], YousignClient(api_key, environment))
-                st.rerun()
-            except ValueError as exc:
-                st.error(t(str(exc)))
-        if record['state'] == 'done' and authorised:
-            if st.button(t('Retrieve signed documents'), key='signature_evidence_' + invoice['id']):
-                try:
-                    client = YousignClient(api_key, environment)
-                    st.download_button(t('Download signed attestation'), download_evidence(invoice, client),
-                                       file_name='signed-confirmation.pdf', mime='application/pdf')
-                    st.download_button(t('Download signature audit trail'), download_evidence(invoice, client, audit=True),
-                                       file_name='signature-audit-trails.zip', mime='application/zip')
-                except ValueError as exc:
-                    st.error(t(str(exc)))
-        return
-    if invoice['buyer_status'] == 'Confirmed':
+        st.write(t('Confirmation status') + ' : **' + t(record['status']) + '**')
+        st.write(t('Recipient') + ' : ' + record['email'])
+        if record['status'] != 'pending':
+            st.write(t('Response recorded on {date} by {name}', date=record['responded_at'], name=record['respondent_name']))
+            if record.get('note'):
+                st.text(record['note'])
+            return
+        st.caption(t('Link expires on {date}', date=record['expires_at']))
+    elif invoice['buyer_status'] == 'Confirmed':
         st.info(t('This invoice is already confirmed. Existing confirmations have been preserved.'))
         return
-    with st.form('signature_form_' + invoice['id']):
-        email = st.text_input(t('Buyer email address'), value=invoice.get('buyer_email', ''), key='signature_email_' + invoice['id'])
-        a, b = st.columns(2)
-        first = a.text_input(t('Signer first name'), key='signature_first_' + invoice['id'], max_chars=80)
-        last = b.text_input(t('Signer last name'), key='signature_last_' + invoice['id'], max_chars=80)
-        consent = st.checkbox(t('I have checked the recipient and want to send this invoice confirmation for signature.'),
-                              key='signature_consent_' + invoice['id'])
-        send = st.form_submit_button(t('Send signature invitation'), type='primary', disabled=not authorised)
-    if send:
+    default_url = os.environ.get('INVOICEFLOW_PUBLIC_URL') or getattr(getattr(st, 'context', None), 'url', '') or ''
+    with st.form('confirmation_form_' + invoice['id']):
+        email = st.text_input(t('Buyer email address'), value=invoice.get('buyer_email', ''), key='confirmation_email_' + invoice['id'])
+        address = st.text_input(t('Public address of this app'), value=default_url,
+                                placeholder='https://your-app.streamlit.app/', key='confirmation_app_url_' + invoice['id'])
+        st.caption(t('Use the address shown in your browser. The buyer must be able to open this app.'))
+        replace = st.checkbox(t('Replace the previous link (it will stop working).'), key='confirmation_replace_' + invoice['id']) if record else False
+        prepare = st.form_submit_button(t('Prepare confirmation email'), type='primary')
+    if prepare:
         try:
-            if not consent:
-                raise SignatureError('Check the recipient confirmation box before sending.')
-            with st.spinner(t('Sending the signature invitation…')):
-                send_signature(database, invoice['id'], YousignClient(api_key, environment),
-                               dict(first_name=first, last_name=last, email=email))
-            st.session_state.notice = t('The signature service accepted the invitation. The invoice remains unconfirmed until the signature is checked.')
+            invitation = create_invitation(database, invoice['id'], email, address, replace=replace)
+            st.session_state['confirmation_draft_' + invoice['id']] = invitation
             st.rerun()
         except ValueError as exc:
             st.error(t(str(exc)))
-    if first.strip() and last.strip() and email.strip():
-        st.download_button(t('Preview the attestation to sign'),
-                           confirmation_pdf(invoice, dict(first_name=first, last_name=last, email=email), environment),
-                           file_name='confirmation-preview.pdf', mime='application/pdf',
-                           key='signature_preview_' + invoice['id'])
+    draft = st.session_state.get('confirmation_draft_' + invoice['id'])
+    if draft and record and draft['token_hash'] == record['token_hash']:
+        email = email_draft(invoice, draft, language)
+        st.success(t('Email prepared. Open your email app and send it yourself; InvoiceFlow has not sent any email.'))
+        st.link_button(t('Open my email app'), email['mailto'], type='primary')
+        with st.expander(t('Copy the link or email text')):
+            st.caption(t('If your email app does not open, paste this message into your usual webmail.'))
+            st.code(draft['link'], language=None)
+            st.text(email['subject'])
+            st.code(email['body'], language=None)
+    elif record:
+        st.info(t('The existing link remains valid until expiry or response. To prepare a new email here, explicitly replace the previous link.'))
+    st.button(t('Refresh buyer response'), key='confirmation_refresh_' + invoice['id'])
+
+
+def render_recipient(database, token, t, euro):
+    """This path stops the main app before any role menu, portfolio or export is rendered."""
+    st.title(t('Invoice confirmation'))
+    try:
+        invoice = inspect_invitation(database, token)
+    except ValueError as exc:
+        st.error(t(str(exc)))
+        return
+    record = invoice['buyer_confirmation']
+    if record['status'] != 'pending':
+        st.success(t('Your response has been recorded. You can close this page.'))
+        st.write(t('Confirmation status') + ' : **' + t(record['status']) + '**')
+        st.caption(t('Response recorded on {date} by {name}', date=record['responded_at'], name=record['respondent_name']))
+        return
+    st.write(t('Please review this invoice before responding.'))
+    for label, value in [('SME', invoice['seller']), ('Buyer', invoice['buyer']),
+                         ('Invoice reference', invoice['reference']), ('Invoice amount', euro(invoice['amount'])),
+                         ('Issue date', invoice['issued']), ('Due date', invoice['due'])]:
+        st.text(t(label) + ' : ' + str(value))
+    st.caption(t('Requested recipient: {email}', email=record['email']))
+    st.caption(t('You are confirming the displayed invoice details. The original uploaded document is not available on this page.'))
+    with st.form('buyer_link_response'):
+        name = st.text_input(t('Your full name'), max_chars=160, key='buyer_response_name')
+        decision = st.radio(t('Decision'), ['Confirm', 'Dispute'], format_func=t, horizontal=True, key='buyer_response_decision')
+        attestation = st.checkbox(t('I declare that I am authorised to represent the buyer and confirm the service, amount, due date, and that this invoice is unpaid and undisputed.'), key='buyer_response_attestation')
+        note = st.text_area(t('Comment · required for a dispute'), max_chars=2000, key='buyer_response_note')
+        submit = st.form_submit_button(t('Submit my response'), type='primary')
+    st.caption(t('This is a confirmation by personal link, without independent identity verification. It is not a certified electronic signature or a payment guarantee.'))
+    if submit:
+        try:
+            respond(database, token, approved=decision == 'Confirm', name=name, attestation=attestation, note=note)
+            st.rerun()
+        except ValueError as exc:
+            st.error(t(str(exc)))

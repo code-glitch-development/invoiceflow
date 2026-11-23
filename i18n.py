@@ -1431,6 +1431,268 @@ FR.update({'Buyer signature': 'Signature acheteur',
  'production': 'Production'})
 
 
+FR.update({'Next: request buyer confirmation': 'Suite : demander la confirmation de l’acheteur',
+ 'Request buyer confirmation': 'Demander la confirmation de l’acheteur',
+ 'Prepare a personal confirmation link, then send it from your own email app. No account, API key or installation is needed.': 'Préparez '
+                                                                                                                               'un '
+                                                                                                                               'lien '
+                                                                                                                               'personnel '
+                                                                                                                               'de '
+                                                                                                                               'confirmation, '
+                                                                                                                               'puis '
+                                                                                                                               'envoyez-le '
+                                                                                                                               'depuis '
+                                                                                                                               'votre '
+                                                                                                                               'messagerie '
+                                                                                                                               'habituelle. '
+                                                                                                                               'Aucun '
+                                                                                                                               'compte '
+                                                                                                                               'supplémentaire, '
+                                                                                                                               'clé '
+                                                                                                                               'API '
+                                                                                                                               'ou '
+                                                                                                                               'installation '
+                                                                                                                               'n’est '
+                                                                                                                               'nécessaire.',
+ 'This is a confirmation by link. It does not independently verify the recipient identity or authority to represent the buyer.': 'Il '
+                                                                                                                                 's’agit '
+                                                                                                                                 'd’une '
+                                                                                                                                 'confirmation '
+                                                                                                                                 'par '
+                                                                                                                                 'lien. '
+                                                                                                                                 'Elle '
+                                                                                                                                 'ne '
+                                                                                                                                 'vérifie '
+                                                                                                                                 'pas '
+                                                                                                                                 'de '
+                                                                                                                                 'façon '
+                                                                                                                                 'indépendante '
+                                                                                                                                 'l’identité '
+                                                                                                                                 'du '
+                                                                                                                                 'destinataire '
+                                                                                                                                 'ou '
+                                                                                                                                 'son '
+                                                                                                                                 'habilitation '
+                                                                                                                                 'à '
+                                                                                                                                 'représenter '
+                                                                                                                                 'l’acheteur.',
+ 'Confirmation status': 'Statut de la confirmation',
+ 'Response recorded on {date} by {name}': 'Réponse enregistrée le {date} par {name}',
+ 'Link expires on {date}': 'Le lien expire le {date}',
+ 'Public address of this app': 'Adresse publique de cette app',
+ 'Use the address shown in your browser. The buyer must be able to open this app.': 'Utilisez l’adresse '
+                                                                                    'affichée dans votre '
+                                                                                    'navigateur. L’acheteur '
+                                                                                    'doit pouvoir accéder à '
+                                                                                    'cette app.',
+ 'Replace the previous link (it will stop working).': 'Remplacer le lien précédent (il ne fonctionnera '
+                                                      'plus).',
+ 'Prepare confirmation email': 'Préparer le mail de confirmation',
+ 'Email prepared. Open your email app and send it yourself; InvoiceFlow has not sent any email.': 'Mail '
+                                                                                                  'préparé. '
+                                                                                                  'Ouvrez '
+                                                                                                  'votre '
+                                                                                                  'messagerie '
+                                                                                                  'et '
+                                                                                                  'envoyez-le '
+                                                                                                  'vous-même '
+                                                                                                  '; '
+                                                                                                  'InvoiceFlow '
+                                                                                                  'n’a '
+                                                                                                  'envoyé '
+                                                                                                  'aucun '
+                                                                                                  'mail.',
+ 'Open my email app': 'Ouvrir ma messagerie',
+ 'Copy the link or email text': 'Copier le lien ou le texte du mail',
+ 'If your email app does not open, paste this message into your usual webmail.': 'Si votre messagerie ne '
+                                                                                 's’ouvre pas, copiez ce '
+                                                                                 'message dans votre webmail '
+                                                                                 'habituel.',
+ 'The existing link remains valid until expiry or response. To prepare a new email here, explicitly replace the previous link.': 'Le '
+                                                                                                                                 'lien '
+                                                                                                                                 'existant '
+                                                                                                                                 'reste '
+                                                                                                                                 'valide '
+                                                                                                                                 'jusqu’à '
+                                                                                                                                 'son '
+                                                                                                                                 'expiration '
+                                                                                                                                 'ou '
+                                                                                                                                 'à '
+                                                                                                                                 'la '
+                                                                                                                                 'réponse. '
+                                                                                                                                 'Pour '
+                                                                                                                                 'préparer '
+                                                                                                                                 'un '
+                                                                                                                                 'nouveau '
+                                                                                                                                 'mail '
+                                                                                                                                 'ici, '
+                                                                                                                                 'remplacez '
+                                                                                                                                 'explicitement '
+                                                                                                                                 'le '
+                                                                                                                                 'lien '
+                                                                                                                                 'précédent.',
+ 'Refresh buyer response': 'Actualiser la réponse de l’acheteur',
+ 'Invoice confirmation': 'Confirmation de facture',
+ 'Your response has been recorded. You can close this page.': 'Votre réponse a été enregistrée. Vous pouvez '
+                                                              'fermer cette page.',
+ 'Please review this invoice before responding.': 'Veuillez vérifier les informations de cette facture avant '
+                                                  'de répondre.',
+ 'Requested recipient: {email}': 'Destinataire sollicité : {email}',
+ 'You are confirming the displayed invoice details. The original uploaded document is not available on this page.': 'Vous '
+                                                                                                                    'confirmez '
+                                                                                                                    'les '
+                                                                                                                    'informations '
+                                                                                                                    'affichées '
+                                                                                                                    'de '
+                                                                                                                    'la '
+                                                                                                                    'facture. '
+                                                                                                                    'Le '
+                                                                                                                    'document '
+                                                                                                                    'original '
+                                                                                                                    'déposé '
+                                                                                                                    'n’est '
+                                                                                                                    'pas '
+                                                                                                                    'disponible '
+                                                                                                                    'sur '
+                                                                                                                    'cette '
+                                                                                                                    'page.',
+ 'Your full name': 'Votre nom complet',
+ 'I declare that I am authorised to represent the buyer and confirm the service, amount, due date, and that this invoice is unpaid and undisputed.': 'Je '
+                                                                                                                                                     'déclare '
+                                                                                                                                                     'être '
+                                                                                                                                                     'habilité '
+                                                                                                                                                     'à '
+                                                                                                                                                     'représenter '
+                                                                                                                                                     'l’acheteur '
+                                                                                                                                                     'et '
+                                                                                                                                                     'confirme '
+                                                                                                                                                     'la '
+                                                                                                                                                     'prestation, '
+                                                                                                                                                     'le '
+                                                                                                                                                     'montant, '
+                                                                                                                                                     'l’échéance '
+                                                                                                                                                     'et '
+                                                                                                                                                     'que '
+                                                                                                                                                     'cette '
+                                                                                                                                                     'facture '
+                                                                                                                                                     'est '
+                                                                                                                                                     'non '
+                                                                                                                                                     'payée '
+                                                                                                                                                     'et '
+                                                                                                                                                     'non '
+                                                                                                                                                     'contestée.',
+ 'Submit my response': 'Envoyer ma réponse',
+ 'This is a confirmation by personal link, without independent identity verification. It is not a certified electronic signature or a payment guarantee.': 'Il '
+                                                                                                                                                           's’agit '
+                                                                                                                                                           'd’une '
+                                                                                                                                                           'confirmation '
+                                                                                                                                                           'par '
+                                                                                                                                                           'lien '
+                                                                                                                                                           'personnel, '
+                                                                                                                                                           'sans '
+                                                                                                                                                           'vérification '
+                                                                                                                                                           'indépendante '
+                                                                                                                                                           'd’identité. '
+                                                                                                                                                           'Ce '
+                                                                                                                                                           'n’est '
+                                                                                                                                                           'ni '
+                                                                                                                                                           'une '
+                                                                                                                                                           'signature '
+                                                                                                                                                           'électronique '
+                                                                                                                                                           'certifiée '
+                                                                                                                                                           'ni '
+                                                                                                                                                           'une '
+                                                                                                                                                           'garantie '
+                                                                                                                                                           'de '
+                                                                                                                                                           'paiement.',
+ 'Enter the public HTTPS address of this InvoiceFlow app.': 'Saisissez l’adresse HTTPS publique de cette app '
+                                                            'InvoiceFlow.',
+ 'This confirmation link is invalid or unavailable.': 'Ce lien de confirmation est invalide ou indisponible.',
+ 'This confirmation link has expired. Ask the supplier for a new link.': 'Ce lien de confirmation a expiré. '
+                                                                         'Demandez un nouveau lien au '
+                                                                         'prestataire.',
+ 'The invoice changed after this link was created. Ask for a new link.': 'La facture a changé depuis la '
+                                                                         'création de ce lien. Demandez un '
+                                                                         'nouveau lien.',
+ 'This invoice can no longer receive a confirmation through this link.': 'Cette facture ne peut plus '
+                                                                         'recevoir de confirmation via ce '
+                                                                         'lien.',
+ 'A confirmed, financed or closed invoice cannot receive a new link.': 'Une facture confirmée, financée ou '
+                                                                       'clôturée ne peut pas recevoir de '
+                                                                       'nouveau lien.',
+ 'The buyer has already responded. Their decision cannot be overwritten.': 'L’acheteur a déjà répondu. Sa '
+                                                                           'décision ne peut pas être '
+                                                                           'remplacée.',
+ 'A link already exists. Explicitly replace it to invalidate the previous link.': 'Un lien existe déjà. '
+                                                                                  'Remplacez-le '
+                                                                                  'explicitement pour '
+                                                                                  'invalider le lien '
+                                                                                  'précédent.',
+ 'Enter your full name (160 characters maximum).': 'Saisissez votre nom complet (160 caractères maximum).',
+ 'Choose a confirmation decision.': 'Choisissez une décision de confirmation.',
+ 'Check the declaration before confirming this invoice.': 'Cochez la déclaration avant de confirmer cette '
+                                                          'facture.',
+ 'The comment must contain at most 2000 characters.': 'Le commentaire doit contenir au maximum 2000 '
+                                                      'caractères.',
+ 'Identity and document checks remain demo declarations. Buyer confirmation by personal link is recorded separately.': 'Les '
+                                                                                                                       'contrôles '
+                                                                                                                       'd’identité '
+                                                                                                                       'et '
+                                                                                                                       'de '
+                                                                                                                       'documents '
+                                                                                                                       'restent '
+                                                                                                                       'déclaratifs '
+                                                                                                                       'pour '
+                                                                                                                       'la '
+                                                                                                                       'démo. '
+                                                                                                                       'La '
+                                                                                                                       'confirmation '
+                                                                                                                       'acheteur '
+                                                                                                                       'par '
+                                                                                                                       'lien '
+                                                                                                                       'personnel '
+                                                                                                                       'est '
+                                                                                                                       'enregistrée '
+                                                                                                                       'séparément.',
+ 'Buyer link confirmation: {state}': 'Confirmation acheteur par lien : {state}',
+ 'Invoice {p0} submitted. Request buyer confirmation from the SME workspace.': 'Facture {p0} déposée. '
+                                                                               'Demandez la confirmation de '
+                                                                               'l’acheteur depuis l’espace '
+                                                                               'PME.',
+ 'InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Buyer confirmation uses a personal link without independent identity verification. No email is sent automatically.': 'InvoiceFlow '
+                                                                                                                                                                                                                          '· '
+                                                                                                                                                                                                                          'Prototype '
+                                                                                                                                                                                                                          'pédagogique. '
+                                                                                                                                                                                                                          'Le '
+                                                                                                                                                                                                                          'scoring, '
+                                                                                                                                                                                                                          'l’assurance '
+                                                                                                                                                                                                                          'et '
+                                                                                                                                                                                                                          'le '
+                                                                                                                                                                                                                          'financement '
+                                                                                                                                                                                                                          'sont '
+                                                                                                                                                                                                                          'simulés. '
+                                                                                                                                                                                                                          'La '
+                                                                                                                                                                                                                          'confirmation '
+                                                                                                                                                                                                                          'acheteur '
+                                                                                                                                                                                                                          'utilise '
+                                                                                                                                                                                                                          'un '
+                                                                                                                                                                                                                          'lien '
+                                                                                                                                                                                                                          'personnel '
+                                                                                                                                                                                                                          'sans '
+                                                                                                                                                                                                                          'vérification '
+                                                                                                                                                                                                                          'indépendante '
+                                                                                                                                                                                                                          'd’identité. '
+                                                                                                                                                                                                                          'Aucun '
+                                                                                                                                                                                                                          'mail '
+                                                                                                                                                                                                                          'n’est '
+                                                                                                                                                                                                                          'envoyé '
+                                                                                                                                                                                                                          'automatiquement.',
+ 'pending': 'En attente de réponse',
+ 'confirmed': 'Confirmée',
+ 'disputed': 'Contestée',
+ 'Buyer confirmation': 'Confirmation acheteur'})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

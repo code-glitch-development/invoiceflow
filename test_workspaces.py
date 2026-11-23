@@ -21,7 +21,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(len(set(snapshots)), 2)
         self.assertNotIn('Financing', WORKSPACES['SME']['pages'])
         self.assertNotIn('Buyer', WORKSPACES)
-        self.assertIn('Buyer signature', WORKSPACES['SME']['pages'])
+        self.assertIn('Buyer confirmation', WORKSPACES['SME']['pages'])
         self.assertNotIn('Buyer confirmation', WORKSPACES['Investor']['pages'])
 
     def test_metrics_follow_financing_and_payment(self):

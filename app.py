@@ -15,8 +15,8 @@ from engine import new_invoice, score, eligible, confirm, finance, quote, loss_s
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
 from investor_ui import render_investor, render_portfolio_summary
-from signature_ui import render_signature
-from electronic_signature import validate_email
+from signature_ui import render_confirmation, render_recipient
+from buyer_confirmation import validate_email
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -42,6 +42,14 @@ except StorageError as exc:
     st.error(t(str(exc)))
     st.stop()
 
+# A recipient sees only the referenced invoice, with no workspace navigation or exports.
+if 'confirmation' in st.query_params:
+    values = st.query_params.get_all('confirmation')
+    token = values[0] if len(values) == 1 else ''
+    render_recipient(database, token, t,
+                     lambda amount: f'{amount:,.2f} €'.replace(',', ' ') if language == 'FR' else f'€{amount:,.2f}')
+    st.stop()
+
 # Apply guided navigation before creating widgets for the new page.
 route = st.session_state.pop('route_request', None)
 if route:
@@ -52,7 +60,7 @@ if route:
 def navigate(role, target_page, invoice=None):
     route = {'ui_demo_role': role, 'ui_navigation': target_page}
     if invoice:
-        if target_page == 'Buyer signature':
+        if target_page == 'Buyer confirmation':
             route['signature_pick'] = invoice['id']
         elif target_page == 'Financing':
             route['finance_pick'] = invoice['id']
@@ -92,7 +100,7 @@ def workflow(invoice):
     elif not invoice['identity'] or not invoice['documents']:
         role, target, label = 'SME', 'Invoice checks', 'Next: complete invoice checks'
     elif invoice['buyer_status'] != 'Confirmed':
-        role, target, label = 'SME', 'Buyer signature', 'Next: request buyer signature'
+        role, target, label = 'SME', 'Buyer confirmation', 'Next: request buyer confirmation'
     else:
         role, target = 'Investor', 'Financing'
         label = 'Next: simulate financing' if eligible(invoice) else 'Review financing blockers'
@@ -143,7 +151,7 @@ def detail(i):
     c.metric(t('Due date'), date.fromisoformat(i['due']).strftime('%d/%m/%Y' if language == 'FR' else '%d %b %Y'))
     with st.expander(t('Checks and audit trail')):
         st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Incomplete'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Incomplete'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Demo risk assessment', 'Result': t('{p0}/100 · threshold 65', p0=score(i)[0])}]), t), hide_index=True, use_container_width=True)
-        st.caption(t('Identity and document checks remain demo declarations. Electronic signatures are verified separately with the signature service.'))
+        st.caption(t('Identity and document checks remain demo declarations. Buyer confirmation by personal link is recorded separately.'))
         st.write(t('SHA-256 fingerprint of metadata'))
         st.code(i['record_hash'])
         if i['file_hash']:
@@ -153,9 +161,11 @@ def detail(i):
         st.write(t('Score breakdown'))
         st.dataframe(localize_frame(pd.DataFrame([{'Criterion': k, 'Points': v} for k, v in score(i)[1].items()]), t), hide_index=True)
         st.caption(t('Maximum 100: financial strength 40/25/5; payment history 25/15/0; confirmation 25; documents 10. This score is not a probability of default.'))
-    if i.get('signature'):
-        st.caption(t('Buyer signature environment: {environment} · status: {state}',
-                     environment=i['signature']['environment'], state=t(i['signature']['state'])))
+    if i.get('buyer_confirmation'):
+        response = i['buyer_confirmation']
+        st.caption(t('Buyer link confirmation: {state}', state=t(response['status'])))
+        if response.get('responded_at'):
+            st.caption(t('Response recorded on {date} by {name}', date=response['responded_at'], name=response['respondent_name']))
     if i['note']:
         st.info(t(i['note']))
 
@@ -327,7 +337,7 @@ elif page == 'Upload an invoice':
                 item['buyer_email'] = email
                 database.add(item)
                 st.session_state.focus_invoice = item['id']
-                st.session_state.notice = t('Invoice {p0} submitted. Request the buyer signature from the SME workspace.', p0=item['reference'])
+                st.session_state.notice = t('Invoice {p0} submitted. Request buyer confirmation from the SME workspace.', p0=item['reference'])
                 st.rerun()
             except ValueError as exc:
                 st.error(t(str(exc)))
@@ -355,15 +365,15 @@ elif page == 'Invoice checks':
                     st.rerun()
                 except ValueError as exc:
                     st.error(t(str(exc)))
-elif page == 'Buyer signature':
-    items = [i for i in invoices if i.get('signature') or (not i.get('financing') and i['status'] != 'Closed')]
+elif page == 'Buyer confirmation':
+    items = [i for i in invoices if i.get('buyer_confirmation') or (not i.get('financing') and i['status'] != 'Closed')]
     if not items:
         st.info(t('No invoices available.'))
     else:
         selected = pick(items, 'signature_pick')
         i = next(i for i in items if i['id'] == selected)
         detail(i)
-        render_signature(i, database, t)
+        render_confirmation(i, database, t, language)
 elif page == 'Financing':
     st.subheader(t('Finance confirmed invoices'))
     focused = next((i for i in invoices if i['id'] == st.session_state.get('focus_invoice')), None)
@@ -496,5 +506,5 @@ elif page == 'Portfolio':
                         except ValueError as exc:
                             st.error(t(str(exc)))
 st.divider()
-st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Electronic signature requires a configured provider; sandbox signatures have no legal effect.'))
+st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Buyer confirmation uses a personal link without independent identity verification. No email is sent automatically.'))
 
