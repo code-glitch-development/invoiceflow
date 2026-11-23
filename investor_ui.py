@@ -8,7 +8,7 @@ from engine import buyer_outstanding_capital, canonical, money
 from portfolio import holding_yield_percent, portfolio_summary
 from financial_risk import assess_buyer
 from pricing_ui import illustrative_pricing_consent
-from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities,
+from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities, tariff_opportunities,
                            filtered, review_selection, review_fingerprint)
 
 
@@ -17,6 +17,7 @@ RISK_COLORS = {
     'Prudent': ('Prudent pricing scenario', '#166534', '#dcfce7'),
     'Central': ('Central pricing scenario', '#92400e', '#fef3c7'),
     'Stressed': ('Stressed pricing scenario', '#991b1b', '#fee2e2'),
+    'Unknown': ('Risk not assessed', '#475569', '#f1f5f9'),
 }
 
 
@@ -50,6 +51,10 @@ def toggle_selection(identifier):
 
 def open_dossier(entry, navigate):
     invoice, report = entry['invoice'], entry['report']
+    if report['model_version']=='altman-tariff-demo-v1':
+        st.session_state.ui_pricing_method='Z-linked tariff (demo)'
+        navigate('Investor','Financing',invoice)
+        return
     prefix = 'pricing_' + invoice['id'] + '_'
     for key, value in report['assumptions'].items():
         if key != 'pd_cohort':
@@ -117,7 +122,7 @@ def comparison(chosen, portfolio, budget, t, euro):
         data[i['reference'] + ' · ' + i['id']] = [i['buyer'], risk_label(entry['scenario'], t), euro(r['advance']),
             t('{days} days', days=r['horizon_days']), f"{r['annual_rate_percent']:.2f}",
             f"{holding_yield_percent(i['amount'], r['advance']):.2f}",
-            f"{r['assumptions']['annual_pd_percent']:.2f}", f"{r['assumptions']['lgd_percent']:.1f}",
+            f"{r['assumptions']['annual_pd_percent']:.2f}" if 'annual_pd_percent' in r['assumptions'] else '—', f"{r['assumptions']['lgd_percent']:.1f}" if 'lgd_percent' in r['assumptions'] else '—',
             euro(i['amount']), euro(r['gross_discount']),
             euro(buyer_outstanding_capital(portfolio, i['buyer'])['outstanding_capital'])]
     frame = pd.DataFrame(data)
@@ -212,7 +217,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.markdown('<span class="investor-badge">' + escape(t('FINANCING SIMULATION')) + '</span>', unsafe_allow_html=True)
     st.title(t('Choose your next financing opportunities') if page == 'Overview' else t('Compare your selection'))
     st.caption(t('Compare capital, payment horizons and scenarios before simulating an investment.'))
-    st.caption(t('Pricing uses fictional risk assumptions and fixed costs, not a market quote. Annualised rates can be high for small amounts or short durations.'))
+    st.caption(t('Rates are commercial or simulation assumptions, not calibrated credit-loss estimates or guaranteed returns.'))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
     st.markdown('<div class="risk-legend" aria-label="' + escape(t('Pricing scenario')) + '">' +
                 ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
@@ -221,6 +226,9 @@ def render_investor(page, invoices, database, t, euro, navigate):
         st.button(t('View portfolio details'), key='investor_portfolio_details',
                   on_click=navigate, args=('Investor', 'Portfolio'))
         st.caption(t('1. Choose an invoice. 2. Review the financing. 3. Confirm the simulation.'))
+    mode=st.radio(t('Quote calculation'),['Z-linked tariff (demo)','Expected-cashflow simulation'],format_func=t,key='investor_quote_mode',horizontal=True)
+    if mode=='Z-linked tariff (demo)':
+        st.info(t('Commercial demonstration tariff: 5%, 7%, 9% by accounting zone; 10% without accounts. Distress or invalid supplied accounts require manual review. No default probabilities are inferred.'))
     saved_filters = st.session_state.get('investor_filters', {})
     for key, default in dict(inv_budget=25000.0, inv_horizon=90, inv_scenario='All').items():
         st.session_state.setdefault(key, saved_filters.get(key, default))
@@ -229,16 +237,19 @@ def render_investor(page, invoices, database, t, euro, navigate):
         budget = a.number_input(t('Total budget (€)'), min_value=1.0, max_value=1000000000.0, step=1000.0, key='inv_budget')
         horizon = b.selectbox(t('Maximum payment horizon'), [30, 60, 90, 180, 365, 36500],
             format_func=lambda days: t('{days} days', days=days), key='inv_horizon')
-        scenario = c.selectbox(t('Scenario'), ['All'] + list(SCENARIOS), format_func=t, key='inv_scenario')
+        scenario = c.selectbox(t('Scenario'), ['All'] + list(SCENARIOS) + ['Unknown'], format_func=t, key='inv_scenario')
         d.button(t('Reset filters'), on_click=reset_filters, use_container_width=True)
     st.session_state.investor_filters = dict(inv_budget=budget, inv_horizon=horizon, inv_scenario=scenario)
-    unassessed = [i for i in invoices if assess_buyer(i)['value'] is None and not i.get('financing')]
-    if unassessed:
-        st.info(t('Return not calculated for {count} invoices: buyer accounting risk is not assessed.', count=len(unassessed)))
-    use_scenario = illustrative_pricing_consent(t)
-    if not use_scenario:
-        st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
-    entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs')) if use_scenario else []
+    if mode=='Z-linked tariff (demo)':
+        entries=tariff_opportunities(invoices)
+    else:
+        unassessed = [i for i in invoices if assess_buyer(i)['value'] is None and not i.get('financing')]
+        if unassessed:
+            st.info(t('Return not calculated for {count} invoices: buyer accounting risk is not assessed.', count=len(unassessed)))
+        use_scenario = illustrative_pricing_consent(t)
+        if not use_scenario:
+            st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
+        entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs')) if use_scenario else []
     available = {e['invoice']['id']: e for e in entries if e['report']['acceptable']}
     previous = st.session_state.get('investor_selection', [])
     selected = [identifier for identifier in previous if identifier in available]
@@ -282,7 +293,10 @@ def render_investor(page, invoices, database, t, euro, navigate):
                              f" · **{holding_yield_percent(invoice['amount'], report['advance']):.2f} %**")
                     st.write(t('Gross annual yield (continuous)') + f" · **{report['annual_rate_percent']:.2f} %**")
                     st.caption(t('Returns assume full payment on the expected payment date, before costs and losses. They are not guaranteed.'))
-                    st.caption(t('Fixed transaction cost included in pricing: {cost}. The annual rate extrapolates the operation to one year; it is not the gain over this invoice period.', cost=euro(report['assumptions']['upfront_cost'])))
+                    if report['model_version']!='altman-tariff-demo-v1':
+                        st.caption(t('Fixed transaction cost included in pricing: {cost}. The annual rate extrapolates the operation to one year; it is not the gain over this invoice period.', cost=euro(report['assumptions'].get('upfront_cost',0))))
+                    else:
+                        st.caption(t('The annual tariff is a commercial hypothesis. The period return uses the actual days to maturity; costs and losses are excluded.'))
                 outstanding = buyer_outstanding_capital(invoices, invoice['buyer'])['outstanding_capital']
                 if outstanding:
                     st.warning(t('Already exposed to this buyer') + ' · ' + euro(outstanding))

@@ -47,6 +47,22 @@ def validate_accounts(accounts, buyer, today=None):
         raise ValueError('Provide a complete annual accounting period of 365 or 366 days ending no later than today.')
     if (today-end).days > MAX_AGE_DAYS:
         raise ValueError('The accounts are too old for the V1 policy (548 days). Provide more recent annual accounts.')
+    from accounting_dates import latest_accounts_check
+    check=latest_accounts_check(end,today)
+    if check['status']=='obsolete':
+        raise ValueError('These accounts are older than the expected latest annual period. Provide newer accounts or request manual review; age alone does not establish fraud.')
+    if accounts.get('extraction'):
+        extracted_end=accounts['extraction'].get('fields',{}).get('period_end')
+        if extracted_end and extracted_end!=end.isoformat():
+            raise ValueError('The entered closing date differs from the date detected in the PDF. Correct the document or request manual review.')
+        extracted_name=accounts['extraction'].get('fields',{}).get('entity_name')
+        if extracted_name and _canonical(extracted_name)!=_canonical(accounts['entity_name']):
+            raise ValueError('The entered company name differs from the company detected in the PDF. Request manual review.')
+        extracted_siren=accounts['extraction'].get('fields',{}).get('buyer_siren')
+        if extracted_siren and extracted_siren!=accounts['buyer_siren']:
+            raise ValueError('The entered buyer SIREN differs from the SIREN detected in the PDF.')
+        if not accounts.get('extraction_reviewed'):
+            raise ValueError('Review the extracted accounting figures against the PDF before saving.')
     if not str(accounts.get('source_reference', '')).strip():
         raise ValueError('Provide the statement source and page references for the entered figures.')
     document = accounts.get('document', {})
@@ -113,7 +129,7 @@ def save_buyer_accounts(store, invoice, accounts, document_bytes=None, filename=
         candidate['document'] = deepcopy(invoice.get('buyer_accounts', {}).get('document', {}))
     validate_accounts(candidate, invoice['buyer'])
     candidate['entered_at'] = datetime.now(timezone.utc).isoformat()
-    candidate['provenance'] = 'Manual transcription from attached PDF; authenticity and identity not independently verified'
+    candidate['provenance'] = 'Local PDF/OCR-assisted transcription, reviewed by the user; authenticity and identity not independently verified' if candidate.get('extraction') else 'Manual transcription from attached PDF; authenticity and identity not independently verified'
     with store.transaction() as db:
         row = db.execute('SELECT payload, version FROM invoices WHERE id = ?', (invoice['id'],)).fetchone()
         if row is None or row[1] != invoice.get('_version'):

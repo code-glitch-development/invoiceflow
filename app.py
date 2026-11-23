@@ -11,9 +11,10 @@ from startup_cleanup import remove_auto_supplier_batch
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
-from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, journey, configure_interest, finance_with_risk_pricing
+from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, journey, configure_interest, finance_with_risk_pricing, finance_with_altman_tariff
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
+from altman_tariff_ui import tariff_controls
 from financial_risk import assess_buyer
 from financial_risk_ui import render_accounts, risk_summary
 from investor_ui import render_investor, render_portfolio_summary
@@ -389,12 +390,15 @@ elif page == 'Financing':
             detail(i)
             st.caption(t('Financing requires buyer confirmation, identity/document review and a future due date. Accounting risk is a separate financial indicator, not an approval or an interest rate.'))
             with st.expander(t('Financing options'), expanded=False):
-                method = st.radio(t('Pricing method'), ['Risk-based pricing', 'Manual assumptions'],
+                method = st.radio(t('Pricing method'), ['Z-linked tariff (demo)', 'Risk-based pricing', 'Manual assumptions'],
                                   format_func=t, key='ui_pricing_method')
                 report = None
                 recourse = st.toggle(t('With recourse to the SME'), value=st.session_state.get('ui_with_recourse_to_the_sme', False), key='ui_with_recourse_to_the_sme')
                 coverage = st.slider(t('Hypothetical insolvency coverage (% of face value)'), 0, 100, st.session_state.get('ui_hypothetical_insolvency_coverage_of_face_value', 80), key='ui_hypothetical_insolvency_coverage_of_face_value')
-            if assess_buyer(i)['value'] is None:
+            if method == 'Z-linked tariff (demo)':
+                report=tariff_controls(i,t,euro)
+                ready=report['acceptable']
+            elif assess_buyer(i)['value'] is None:
                 st.info(t('Return not calculated — risk not assessed. Add the buyer annual accounts before preparing a financing simulation.'))
                 ready = False
             elif method == 'Risk-based pricing':
@@ -420,7 +424,9 @@ elif page == 'Financing':
                 st.warning(t('Resolve the requirements listed above before financing.'))
             if st.button(t('Simulate financing'), type='primary', disabled=not eligible(i) or not ready, key='ui_simulate_financing'):
                 try:
-                    if method == 'Risk-based pricing':
+                    if method == 'Z-linked tariff (demo)':
+                        persist_update(i, finance_with_altman_tariff, recourse, coverage)
+                    elif method == 'Risk-based pricing':
                         persist_update(i, finance_with_risk_pricing, report['assumptions'], recourse, coverage)
                     else:
                         persist_update(i, finance, rate, recourse, coverage, annual_interest)

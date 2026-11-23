@@ -111,7 +111,8 @@ class InvoiceStore:
     def finance_selection(self, review):
         """Recheck the reviewed portfolio and fund the whole batch atomically."""
         from opportunities import review_selection
-        from engine import finance_with_risk_pricing
+        from engine import finance_with_risk_pricing, finance_with_altman_tariff
+        from altman_tariff import tariff_quote, MODEL_VERSION as TARIFF_VERSION
         from risk_pricing import price_invoice
         with self.transaction() as db:
             rows = db.execute('SELECT payload, version FROM invoices ORDER BY rowid').fetchall()
@@ -122,7 +123,7 @@ class InvoiceStore:
             repriced = []
             for entry in review['rows']:
                 invoice = by_id[entry['invoice']['id']]
-                report = price_invoice(invoice, entry['report']['assumptions'])
+                report = tariff_quote(invoice) if entry['report']['model_version']==TARIFF_VERSION else price_invoice(invoice, entry['report']['assumptions'])
                 if report['snapshot_hash'] != entry['report']['snapshot_hash']:
                     raise StorageError('The selection changed. Review the latest offers before confirming.')
                 repriced.append(dict(invoice=invoice, report=report, scenario=entry['scenario']))
@@ -130,7 +131,10 @@ class InvoiceStore:
             saved = []
             for entry in checked['rows']:
                 invoice = entry['invoice']
-                finance_with_risk_pricing(invoice, entry['report']['assumptions'], False, 0)
+                if entry['report']['model_version']==TARIFF_VERSION:
+                    finance_with_altman_tariff(invoice)
+                else:
+                    finance_with_risk_pricing(invoice, entry['report']['assumptions'], False, 0)
                 result = db.execute('UPDATE invoices SET payload = ?, version = version + 1 WHERE id = ? AND version = ?',
                     (self.payload(invoice), invoice['id'], invoice['_version']))
                 if result.rowcount != 1:

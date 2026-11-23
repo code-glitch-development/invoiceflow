@@ -216,11 +216,76 @@ The investor screens use `FV = P × exp(t × r / 100)`: `P` is the original capi
 
 The mathematical convention is continuous compounding; see [OpenStax](https://openstax.org/books/college-algebra-corequisite-support/pages/6-1-exponential-functions). This model does not establish contractual interest, penalties, collectible debt or guaranteed payment.
 
+## Automatic accounts prefill and user-approved tariff
+
+**Buyer accounts** now reads an uploaded PDF before creating the editable widgets.
+Recognised company/SIREN, annual dates and accounting figures are prefilled with
+page/line evidence. The provisional Z-double-prime and tariff update on reruns;
+review and save the figures before they are used as the stored assessment.
+Uploading a replacement clears previously proposed values; rerunning the same
+file preserves manual corrections. The review checkbox confirms transcription
+review only, not company identity, document authenticity or financing approval.
+
+Extraction is local and conservative, with existing PDF/Tesseract dependencies
+and no external AI/API fee. It analyses the first 16 pages, OCR at most six scanned
+pages, and limits each OCR call to 15 seconds. It supports explicit French/English
+accounting labels, signed/zero amounts, labelled current/prior-year columns and
+page units (EUR, thousands/millions). Explicit gross/depreciation/net layouts are
+handled when their ordering is clear. Conflicts and ambiguous columns stay empty.
+EBITDA, net income and a bare retained-profit component are never silently treated
+as EBIT or accumulated retained earnings. Total non-equity liabilities may be
+derived as assets minus equity. Many tax-package/custom layouts will require
+manual completion; this is not universal accounting-document understanding.
+
+A calendar check infers the closing month/day from the submitted accounts. It
+shows the latest completed period and uses a six-month V1 preparation window
+before requiring the newer period, alongside the existing 548-day maximum age.
+That window is an application assumption, not a legal deadline. For example, on
+23 November 2026, a 31 December closing normally points to 2025 accounts, not
+unclosed 2026 accounts. Previous-year accounts are not automatically fraudulent.
+Future/obsolete dates, inconsistent accounts or an entered date/SIREN/company
+contradicting detected PDF labels produce errors or require manual review.
+No external filing register is queried: these checks cannot establish the latest
+available filing or detect fraud by themselves. Unsupported OCR dates must be
+reviewed manually. Recorded extraction evidence and review status are retained.
+
+The default **Z-linked tariff (demo)** is the user-chosen commercial policy:
+
+| Accounting state | Base | Additional premium | Annual continuous tariff | Automatic tariff simulation |
+| --- | ---: | ---: | ---: | --- |
+| Z > 2.60 | 5% | 0 points | 5% | Subject to operational eligibility |
+| 1.10 <= Z <= 2.60 | 5% | 2 points | 7% | Subject to operational eligibility |
+| Z < 1.10 | 5% | 4 points | 9% indicative | Manual review; blocked |
+| No buyer accounts supplied | 5% | 5 points | 10% | Subject to operational eligibility; risk remains unassessed |
+| Accounts supplied but unusable | — | — | 10% indicative fallback | Correct the accounts or request manual review; blocked |
+
+These premiums are explicit commercial choices, not calibrated default
+probabilities, market quotations or evidence that a rate compensates losses.
+The 10% tier is an information-uncertainty surcharge selected by the user, not a
+claim that unknown risk is measurable. The previous no-quote-without-accounts
+policy has been replaced only in this tariff mode. The optional expected-cashflow
+sandbox still requires an accounting assessment and explicit fictional-scenario
+opt-in; its PD and costs are not added on top of the tariff.
+
+For a known invoice face FV, tariff pricing uses
+`PV = FV * exp(-(annual_rate_percent/100) * actual_days/365)`.
+The advance is rounded down to cents, gross spread is `FV - PV`, and operation
+return is spread/PV. The stored cash-flow annual equivalent accounts for rounding,
+so saved future value at maturity reconciles with the face amount. Costs, fees,
+insurance and losses are not secretly deducted or covered by this simple tariff.
+The dashboard therefore remains gross and conditional on full payment.
+
+Tariff and legacy cash-flow quotes are selectable in the investor opportunity
+screen. Missing PD/LGD for tariff quotes are shown as unavailable, never zero.
+The invoice dossier rechecks and saves its tariff, accounting zone, source and
+quote fingerprint. Batch financing re-evaluates the current model/record version
+atomically; changed risk data or expiry cannot silently reuse an old quote.
+Existing financed operations keep their original amounts and assumptions.
+
 ## Buyer accounting indicator: Altman Z-double-prime
 
 Open **SME or Investor → Buyer accounts**, select the invoice, attach the buyer's
-balance sheet and income statement in a single PDF (maximum 5 MB), and manually
-transcribe the seven required accounting values. Fields start empty. Identify
+balance sheet and income statement in a single PDF (maximum 5 MB), and review the seven required accounting values proposed by local extraction. Unrecognised values start empty. Identify
 the buyer by the name on the invoice and SIREN (format only), a complete annual
 period and source/page references. The source PDF is archived as a SQLite BLOB,
 linked by SHA-256; the invoice JSON export contains its provenance and figures,
@@ -262,13 +327,11 @@ interest and tax, not copied from EBITDA or net profit. Ask the accountant if
 mapping a French statement is ambiguous. All amounts use EUR, not thousands.
 The code validates arithmetic and provenance fields, not document authenticity,
 company identity, source accuracy or sector suitability beyond the declaration.
-No accounting OCR, official rating API or independent credit analyst is claimed.
+Local accounting OCR/prefill is available as described above; no official rating API or independent credit analyst is claimed.
 Use public or anonymised statements in the shared academic workspace.
 
 A financial indicator neither approves identity/documents nor calibrates PD,
-LGD or funding costs. No default yield is shown for an unassessed buyer. Even an
-assessed buyer receives no automatic yield: the older scenario-pricing sandbox
-is available only after the user explicitly enables fictional pricing. Its colour
+LGD or funding costs. The default commercial tariff now quotes 10% for missing accounts while keeping risk unassessed. The older scenario-pricing sandbox is available only after the user explicitly enables fictional pricing and supplies usable accounts. Its colour
 badges describe pricing scenarios, distinct from the document-based accounting
 zone. A documented, validated pricing/credit model is still required for a real
 financing offer. Operational eligibility checks remain separate. Existing
@@ -279,7 +342,7 @@ statement inputs exist only in tests, clearly marked as fixtures.
 
 ## Risk-sensitive pricing
 
-Open **Investor → Financing**. No yield is proposed without usable buyer accounts. Even after an accounting assessment, pricing simulations require explicit opt-in. The optional **internal fictional annual cohort** uses four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the accounting score is never converted to a cohort or PD.
+Open **Investor → Financing**. In the optional expected-cashflow mode, no yield is proposed without usable buyer accounts. Even after an accounting assessment, this mode requires explicit simulation opt-in. The optional **internal fictional annual cohort** uses four defaults among 200 simulated buyers give an observed annual rate of 2%. Other explicitly selected fictional groups give different observed rates. Counts are invented aggregates for a completed calendar year, separate from the invoices currently moving through the workflow. They do not constitute empirical evidence about an actual buyer, and the accounting score is never converted to a cohort or PD.
 
 The screen shows numerator, denominator, annual period and data origin. PD and cohort provenance are read-only; costs and recovery assumptions remain adjustable. Cohort counts/version are checked on pricing and saved in the JSON report. Switching to manual PD inputs permits explicit alternative assumptions; missing inputs/source still block funding. No credit-data provider or external API is required for the default demonstration.
 

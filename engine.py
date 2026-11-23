@@ -173,6 +173,17 @@ def finance_with_risk_pricing(i, assumptions, recourse, coverage):
     i.update(candidate)
 
 
+def finance_with_altman_tariff(i, recourse=False, coverage=0):
+    from altman_tariff import tariff_quote
+    report=tariff_quote(i)
+    if not report['acceptable']:
+        raise ValueError(report['blockers'][0])
+    candidate=deepcopy(i)
+    finance(candidate,report['discount_percent'],recourse,coverage,report['annual_rate_percent'])
+    candidate['financing'].update(advance=report['advance'],fee=report['gross_discount'],pricing=report)
+    i.update(candidate)
+
+
 def loss_scenario(amount, rate, coverage, recourse=False):
     q = quote(amount, rate)
     # Assumption: indemnity based on face value, capped at the capital advanced.

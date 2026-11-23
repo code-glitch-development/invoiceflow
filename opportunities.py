@@ -48,6 +48,20 @@ def opportunities(invoices, assignments=None, costs=None):
     return result
 
 
+def tariff_opportunities(invoices):
+    from altman_tariff import tariff_quote
+    result=[]
+    for invoice in invoices:
+        if not eligible(invoice):
+            continue
+        try:
+            report=tariff_quote(invoice)
+        except ValueError:
+            continue
+        result.append(dict(invoice=invoice,scenario=report['scenario'],report=report))
+    return result
+
+
 def filtered(entries, budget, horizon, scenario='All'):
     return [e for e in entries if e['report']['acceptable'] and
             e['report']['advance'] <= budget and e['report']['horizon_days'] <= horizon and

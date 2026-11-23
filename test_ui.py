@@ -34,6 +34,8 @@ class InterfaceTests(unittest.TestCase):
         app = AppTest.from_file(str(Path(__file__).with_name('app.py')), default_timeout=20)
         # Existing pricing regression tests explicitly opt in to fictional scenarios.
         app.session_state['allow_illustrative_pricing'] = True
+        app.session_state['ui_pricing_method'] = 'Risk-based pricing'
+        app.session_state['investor_quote_mode'] = 'Expected-cashflow simulation'
         return app.run()
 
     def test_new_workspace_stays_empty_without_example_restore_actions(self):
@@ -327,6 +329,7 @@ class InterfaceTests(unittest.TestCase):
             self.assertFalse(at.exception)
             prefix='accounts_'+invoice['id']+'_'
             self.assertTrue(any('Risk not assessed' in i.value for i in at.info))
+            at.text_input(key=prefix+'entity').set_value(invoice['buyer'])
             at.text_input(key=prefix+'siren').set_value('987654321')
             at.selectbox(key=prefix+'type').set_value('Non-financial, non-manufacturing company')
             end=date.today()-timedelta(days=30)
@@ -335,6 +338,7 @@ class InterfaceTests(unittest.TestCase):
             at.text_input(key=prefix+'reference').set_value('Test annual accounts, pages 1-2')
             for key,value in fixture_accounts(invoice)['values'].items():
                 at.number_input(key=prefix+key).set_value(value)
+            at.checkbox(key=prefix+'reviewed').check()
             next(b for b in at.button if b.label=='Save accounting data and calculate').click().run()
             self.assertFalse(at.exception)
             saved=next(i for i in store.load() if i['id']==invoice['id'])
@@ -343,6 +347,59 @@ class InterfaceTests(unittest.TestCase):
             at.sidebar.radio(key='language').set_value('FR').run()
             self.assertFalse(at.exception)
             self.assertTrue(any(m.label=='Indicateur Z″ d’Altman' for m in at.metric))
+
+    def test_account_upload_automatically_prefills_and_previews_z(self):
+        import os
+        from io import BytesIO
+        from test_extraction import text_pdf
+        from test_accounting_extraction import account_lines
+        from storage import InvoiceStore
+        store=InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        invoice=store.load()[0];invoice.pop('buyer_accounts',None);store.update(invoice)
+        upload=BytesIO(text_pdf(account_lines(invoice['buyer'])));upload.name='accounts.pdf'
+        with patch('streamlit.file_uploader',return_value=upload):
+            at=self.app()
+            at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+            at.selectbox(key='accounts_pick').set_value(invoice['id']).run()
+            prefix='accounts_'+invoice['id']+'_'
+            self.assertFalse(at.exception)
+            self.assertEqual(at.number_input(key=prefix+'total_assets').value,1000000)
+            self.assertEqual(at.number_input(key=prefix+'total_liabilities').value,600000)
+            self.assertEqual(at.number_input(key=prefix+'ebit').value,80000)
+            self.assertEqual(at.text_input(key=prefix+'siren').value,'987654321')
+            self.assertFalse(at.checkbox(key=prefix+'reviewed').value)
+            at.selectbox(key=prefix+'type').set_value('Non-financial, non-manufacturing company').run()
+            self.assertFalse(at.exception)
+            self.assertTrue(any(m.label=='Altman Z-double-prime indicator' and m.value=='3.86' for m in at.metric))
+            # Review is required for persistence, without changing the financial score.
+            next(b for b in at.button if b.label=='Save accounting data and calculate').click().run()
+            self.assertTrue(at.error)
+            at.checkbox(key=prefix+'reviewed').check().run()
+            next(b for b in at.button if b.label=='Save accounting data and calculate').click().run()
+            self.assertFalse(at.exception)
+            saved=next(i for i in store.load() if i['id']==invoice['id'])
+            self.assertTrue(saved['buyer_accounts']['extraction_reviewed'])
+            self.assertIn('total_assets',saved['buyer_accounts']['extraction']['evidence'])
+
+    def test_new_default_tariff_is_ten_percent_for_unknown_buyer(self):
+        import os
+        from streamlit.testing.v1 import AppTest
+        from storage import InvoiceStore
+        store=InvoiceStore(os.environ['INVOICEFLOW_DB_PATH'])
+        invoice=store.load()[0];invoice.pop('buyer_accounts',None);store.update(invoice)
+        at=AppTest.from_file(str(Path(__file__).with_name('app.py')),default_timeout=20).run()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.selectbox(key='finance_pick').set_value(invoice['id']).run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.radio(key='ui_pricing_method').value,'Z-linked tariff (demo)')
+        self.assertTrue(any(m.label=='Annual continuous tariff' and m.value=='10.00 %' for m in at.metric))
+        self.assertFalse(at.button(key='ui_simulate_financing').disabled)
+        at.button(key='ui_simulate_financing').click().run()
+        self.assertFalse(at.exception)
+        saved=next(i for i in store.load() if i['id']==invoice['id'])
+        self.assertEqual(saved['financing']['pricing']['policy_annual_rate_percent'],10)
+        self.assertIsNone(saved['financing']['pricing']['accounting_z'])
 
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO
