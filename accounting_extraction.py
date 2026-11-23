@@ -218,3 +218,17 @@ def apply_accounts_upload(state,prefix,data):
     state[prefix+'prefill_hash']=digest
     state[prefix+'extraction']=dict(fields=result.fields,values=result.values,evidence=result.evidence,warnings=result.warnings,used_ocr=result.used_ocr)
     return True
+
+
+def restore_saved_accounts(state,prefix,previous):
+    """Removing a replacement PDF must not associate its draft with an older PDF."""
+    if prefix+'prefill_hash' not in state:return
+    from financial_risk import FIELDS
+    mapping={'entity_name':'entity','buyer_siren':'siren','period_start':'start','period_end':'end','source_reference':'reference'}
+    for source,target in mapping.items():
+        value=previous.get(source,None if source.startswith('period_') else '')
+        if source.startswith('period_') and value:value=date.fromisoformat(value)
+        state[prefix+target]=value
+    for name in FIELDS:state[prefix+name]=previous.get('values',{}).get(name)
+    state[prefix+'reviewed']=previous.get('extraction_reviewed',False)
+    state.pop(prefix+'prefill_hash',None);state.pop(prefix+'extraction',None)

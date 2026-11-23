@@ -101,6 +101,15 @@ class AccountingExtractionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Review the extracted'):
             validate_accounts(accounts,invoice['buyer'])
 
+    def test_removing_new_pdf_cannot_reuse_its_values_with_saved_source(self):
+        from accounting_extraction import restore_saved_accounts
+        state={};prefix='draft_';apply_accounts_upload(state,prefix,text_pdf(account_lines()))
+        restore_saved_accounts(state,prefix,{})
+        self.assertIsNone(state[prefix+'total_assets'])
+        self.assertIsNone(state[prefix+'end'])
+        self.assertNotIn(prefix+'prefill_hash',state)
+        self.assertFalse(state[prefix+'reviewed'])
+
     def test_ocr_fallback_is_used_for_image_only_pdf(self):
         from pypdf import PdfWriter
         from io import BytesIO

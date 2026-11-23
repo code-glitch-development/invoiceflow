@@ -42,7 +42,7 @@ def risk_summary(invoice, t):
 
 
 def render_accounts(invoice, store, t):
-    from accounting_extraction import apply_accounts_upload
+    from accounting_extraction import apply_accounts_upload, restore_saved_accounts
     from accounting_dates import latest_accounts_check
     from hashlib import sha256
     from copy import deepcopy
@@ -74,8 +74,7 @@ def render_accounts(invoice, store, t):
             st.json({key:({k:(v.isoformat() if isinstance(v,date) else v) for k,v in value.items()} if key=='fields' else value)
                      for key,value in extracted.items() if key in ('fields','values','evidence')})
     else:
-        st.session_state.pop(prefix+'prefill_hash',None)
-        st.session_state.pop(prefix+'extraction',None)
+        restore_saved_accounts(st.session_state,prefix,previous)
     def draft(name,default=None):return st.session_state.get(prefix+name,default)
     entity=st.text_input(t('Company named in the accounts'),value=draft('entity',previous.get('entity_name',invoice['buyer'])),key=prefix+'entity')
     siren=st.text_input(t('Buyer SIREN · format check only'),value=draft('siren',previous.get('buyer_siren','')),max_chars=9,key=prefix+'siren')
