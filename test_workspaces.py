@@ -18,9 +18,9 @@ class WorkspaceTests(unittest.TestCase):
             if role == 'Investor':
                 self.assertTrue(all(eligible(i) for i in items))
                 self.assertEqual(metrics[1][1], sum(i['amount'] for i in items))
-        self.assertEqual(len(set(snapshots)), 2)
+        self.assertEqual(len(set(snapshots)), 3)
         self.assertNotIn('Financing', WORKSPACES['SME']['pages'])
-        self.assertNotIn('Buyer', WORKSPACES)
+        self.assertIn('Buyer', WORKSPACES)
         self.assertIn('Buyer confirmation', WORKSPACES['SME']['pages'])
         self.assertNotIn('Buyer confirmation', WORKSPACES['Investor']['pages'])
 

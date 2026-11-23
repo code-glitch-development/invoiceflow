@@ -22,6 +22,7 @@ from financial_risk_ui import render_accounts, risk_summary
 from investor_ui import render_investor, render_portfolio_summary
 from signature_ui import render_confirmation, render_recipient
 from buyer_confirmation import validate_email
+from buyer_workspace import buyer_invoices, render_buyer_confirmation
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -65,6 +66,8 @@ if route:
 def navigate(role, target_page, invoice=None):
     route = {'ui_demo_role': role, 'ui_navigation': target_page}
     if invoice:
+        if role == 'Buyer':
+            route['ui_buyer_company'] = invoice['buyer']
         if target_page == 'Buyer confirmation':
             route['signature_pick'] = invoice['id']
         elif target_page == 'Financing':
@@ -105,7 +108,7 @@ def workflow(invoice):
     if invoice.get('financing'):
         role, target, label = 'Investor', 'Portfolio', 'Next: track payment'
     elif invoice['buyer_status'] != 'Confirmed':
-        role, target, label = 'SME', 'Buyer confirmation', 'Next: request buyer confirmation'
+        role, target, label = ('Buyer', 'Buyer confirmation', 'Review buyer invoices') if profile == 'Buyer' else ('SME', 'Buyer confirmation', 'Next: request buyer confirmation')
     elif not invoice['identity'] or not invoice['documents']:
         role, target, label = 'SME', 'Invoice checks', 'View pending checks'
     else:
@@ -239,22 +242,31 @@ def future_value_panel(invoice):
 
 with st.sidebar:
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
-    profile = st.selectbox(t('Demo role'), ['SME', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Investor']), on_change=change_workspace)
+    profile = st.selectbox(t('Demo role'), list(WORKSPACES), key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', list(WORKSPACES)), on_change=change_workspace)
+    buyer_company = ''
+    if profile == 'Buyer':
+        companies = sorted({i['buyer'] for i in invoices})
+        if companies:
+            buyer_company = st.selectbox(t('Buyer company (demo)'), companies, key='ui_buyer_company', index=selected_index('ui_buyer_company', companies))
+        st.caption(t('Company selection filters this demo view; it is not a secure login.'))
     workspace = WORKSPACES[profile]
     pages = workspace['pages']
     page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
     st.divider()
     st.caption(t('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.'))
-    with st.expander(t('Workspace data')):
-        reset = st.checkbox(t('Delete all saved invoices for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
-        if st.button(t('Clear invoice workspace'), disabled=not reset, key='ui_reload_examples'):
-            try:
-                database.reset([])
-                st.session_state.pop('focus_invoice', None)
-                st.session_state.pop('ui_filter_statuses', None)
-                st.rerun()
-            except StorageError as exc:
-                st.error(t(str(exc)))
+    if profile != 'Buyer':
+        with st.expander(t('Workspace data')):
+            reset = st.checkbox(t('Delete all saved invoices for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
+            if st.button(t('Clear invoice workspace'), disabled=not reset, key='ui_reload_examples'):
+                try:
+                    database.reset([])
+                    st.session_state.pop('focus_invoice', None)
+                    st.session_state.pop('ui_filter_statuses', None)
+                    st.rerun()
+                except StorageError as exc:
+                    st.error(t(str(exc)))
+if profile == 'Buyer':
+    invoices = buyer_invoices(invoices, buyer_company)
 if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions']):
     st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
             '</div><h1>' + t(workspace['headline']) + '</h1><p>' +
@@ -280,8 +292,11 @@ elif page == 'Overview':
         st.subheader(t('Continue an invoice'))
         selected = pick(actionable, 'overview_pick')
         current = next(i for i in actionable if i['id'] == selected)
-        workflow(current)
-        show_requirements(current)
+        if profile == 'Buyer':
+            st.caption(t('Confirm the invoice and supply your annual accounts from the buyer menu. Payment ability is assessed, not guaranteed.'))
+        else:
+            workflow(current)
+            show_requirements(current)
     else:
         st.info(t('No invoices in this workspace queue.'))
 elif page == 'Upload an invoice':
@@ -373,8 +388,11 @@ elif page == 'Buyer confirmation':
     else:
         selected = pick(items, 'signature_pick')
         i = next(i for i in items if i['id'] == selected)
-        detail(i)
-        render_confirmation(i, database, t, language)
+        if profile == 'Buyer':
+            render_buyer_confirmation(i, database, buyer_company, t, euro)
+        else:
+            detail(i)
+            render_confirmation(i, database, t, language)
 elif page == 'Financing':
     st.subheader(t('Finance confirmed invoices'))
     focused = next((i for i in invoices if i['id'] == st.session_state.get('focus_invoice')), None)
@@ -483,6 +501,14 @@ elif page == 'Simulator':
     a.metric(t('Hypothetical monthly fee revenue'), euro(count * result.get('platform_commission', 0)))
     b.metric(t('Hypothetical annual fee revenue'), euro(count * result.get('platform_commission', 0) * 12))
     st.caption(t('At constant volume, before all expenses. This simulation is not a business forecast.'))
+elif page == 'Portfolio' and profile == 'Buyer':
+    st.subheader(t('Track invoices payable'))
+    st.caption(t('The buyer pays the invoice face amount at maturity. Financing costs and the platform commission are paid by the supplier.'))
+    st.dataframe(table(invoices), hide_index=True, use_container_width=True)
+    if invoices:
+        selected = pick(invoices, 'buyer_tracking_pick')
+        current = next(i for i in invoices if i['id'] == selected)
+        risk_summary(current, t)
 elif page == 'Portfolio':
     if profile == 'Investor':
         render_portfolio_summary(invoices, t, euro)

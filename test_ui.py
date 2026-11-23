@@ -47,7 +47,7 @@ class InterfaceTests(unittest.TestCase):
             at = self.app()
             self.assertFalse(at.exception)
             self.assertEqual(at.session_state['invoices'], [])
-            for role in ('SME', 'Investor'):
+            for role in ('SME', 'Investor', 'Buyer'):
                 at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
                 for page in WORKSPACES[role]['pages']:
                     at.sidebar.radio(key='ui_navigation').set_value(page).run()
@@ -425,6 +425,47 @@ class InterfaceTests(unittest.TestCase):
         self.assertFalse(at.exception)
         self.assertTrue(any(table.value.astype(str).eq('Net payment to the SME').to_numpy().any() for table in at.table))
 
+    def test_buyer_workspace_filters_companies_confirms_and_opens_accounts(self):
+        from i18n import Translator
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Buyer').run()
+        at.sidebar.selectbox(key='ui_buyer_company').set_value('Groupe Horizon').run()
+        self.assertFalse(at.exception)
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
+        pending = next(i for i in at.session_state['invoices'] if i['buyer']=='Groupe Horizon' and i['buyer_status']=='Pending')
+        labels = at.selectbox(key='signature_pick').options
+        self.assertTrue(all(any(label.startswith(i['reference'] + ' · ') for i in at.session_state['invoices'] if i['buyer']=='Groupe Horizon') for label in labels))
+        at.selectbox(key='signature_pick').set_value(pending['id']).run()
+        prefix = 'buyer_reply_' + pending['id'] + '_'
+        at.text_input(key=prefix+'name').set_value('Buyer Demo')
+        at.checkbox(key=prefix+'attestation').check()
+        next(b for b in at.button if b.label=='Save buyer decision (demo)').click().run()
+        self.assertFalse(at.exception)
+        saved = next(i for i in at.session_state['invoices'] if i['id']==pending['id'])
+        self.assertEqual(saved['buyer_status'], 'Confirmed')
+        self.assertEqual(saved['buyer_confirmation']['method'], 'buyer_workspace_demo')
+        self.assertNotIn(prefix+'attestation', [c.key for c in at.checkbox])
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+        at.selectbox(key='accounts_pick').set_value(pending['id']).run()
+        self.assertFalse(at.exception)
+        self.assertEqual(at.text_input(key='accounts_'+pending['id']+'_entity').value, 'Groupe Horizon')
+        for language in ('FR', 'EN'):
+            at.sidebar.radio(key='language').set_value(language).run()
+            self.assertFalse(at.exception)
+            at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+            self.assertFalse(at.exception)
+            self.assertTrue(any(Translator(language).text('Track invoices payable') == h.value for h in at.subheader))
+        at.sidebar.selectbox(key='ui_buyer_company').set_value('Maison Atlas').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer accounts').run()
+        self.assertFalse(at.exception)
+        allowed = set(at.selectbox(key='accounts_pick').options)
+        self.assertNotIn(pending['id'], allowed)
+        self.assertTrue(allowed)
+        self.assertTrue(all(any(label.startswith(i['reference'] + ' · ') for i in at.session_state['invoices'] if i['buyer']=='Maison Atlas') for label in allowed))
+        at.sidebar.selectbox(key='ui_demo_role').set_value('SME').run()
+        self.assertFalse(at.exception)
+        self.assertNotIn('ui_buyer_company', [s.key for s in at.sidebar.selectbox])
+
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO
         upload = BytesIO(b'invalid')
@@ -479,7 +520,7 @@ class InterfaceTests(unittest.TestCase):
     def test_prepare_confirmation_email_without_provider_or_credentials(self):
         from engine import eligible
         at = self.app()
-        self.assertNotIn('Buyer', at.sidebar.selectbox(key='ui_demo_role').options)
+        self.assertIn('Buyer', at.sidebar.selectbox(key='ui_demo_role').options)
         at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
         pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
         identifier = pending['id']

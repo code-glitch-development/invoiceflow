@@ -23,6 +23,16 @@ WORKSPACES = {
         'target': 'Financing',
         'steps': ['Finance confirmed invoices', 'Explore financing scenarios', 'Invoice and transaction tracking'],
     },
+    'Buyer': {
+        'pages': ['Overview', 'Buyer confirmation', 'Buyer accounts', 'Portfolio'],
+        'title': 'Buyer workspace',
+        'headline': 'Review your invoices and share your annual accounts.',
+        'description': 'Confirm or dispute supplier invoices and provide the financial statements used to assess your company.',
+        'section': 'Invoices awaiting your decision',
+        'action': 'Review buyer invoices',
+        'target': 'Buyer confirmation',
+        'steps': ['Review supplier invoices', 'Provide annual accounts', 'Track invoices payable'],
+    },
 }
 
 
@@ -38,6 +48,11 @@ def overview(role, invoices):
                    ('Invoice files awaiting review', len(incomplete), False),
                    ('Simulated advances', sum(i['financing'].get('sme_net_proceeds', i['financing']['advance']) for i in financed), True)]
         items = invoices
+    elif role == 'Buyer':
+        metrics = [('Invoices awaiting your decision', len(pending), False),
+                   ('Amount awaiting buyer decision', sum(i['amount'] for i in pending), True),
+                   ('Buyer accounts supplied', sum(bool(i.get('buyer_accounts')) for i in invoices), False)]
+        items = pending
     else:
         metrics = [('Eligible for financing simulation', len(available), False),
                    ('Eligible invoice volume', sum(i['amount'] for i in available), True),

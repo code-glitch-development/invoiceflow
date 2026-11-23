@@ -39,12 +39,13 @@ The demo role selector opens a distinct workspace and returns to its overview:
 
 - **SME:** upload, invoice checks, buyer confirmation links and tracking; submitted volume, incomplete files and simulated advances.
 - **Investor:** financing, simulator and portfolio; eligible invoices, their volume and outstanding advances.
+- **Buyer:** select a demo company, confirm/dispute supplier invoices, provide annual accounts and track invoices payable.
 
 Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
 
 1. Open **SME → Overview**. New workspaces start empty; upload or enter your own invoice to begin.
 2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. New invoices have pending identity/document review; suppliers cannot approve their own checks.
-3. Select **SME → Buyer confirmation**. Enter a recipient email and prepare the mail. Send it from your own mail composer, open its link in another browser window, enter a name and confirm the invoice. Return to the SME page and refresh the response.
+3. Select **SME → Buyer confirmation**. Enter a recipient email and prepare the mail. Send it from your own mail composer, open its link in another browser window, enter a name and confirm the invoice. Return to the SME page and refresh the response. Alternatively, use **Buyer → Buyer confirmation**, select the company and invoice, and record an explicitly simulated decision.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
 5. Open **Portfolio** to export CSV or JSON, and simulate late payment, a dispute, insolvency or full payment.
 6. Use **Simulator** independently to explore advances, losses and hypothetical monthly and annual fee revenue.
@@ -284,7 +285,7 @@ Existing financed operations keep their original amounts and assumptions.
 
 ## Buyer accounting indicator: Altman Z-double-prime
 
-Open **SME or Investor → Buyer accounts**, select the invoice, attach the buyer's
+Open **Buyer → Buyer accounts** (also available in the SME and Investor workspaces), select the invoice, attach the buyer's
 balance sheet and income statement in a single PDF (maximum 5 MB), and review the seven required accounting values proposed by local extraction. Unrecognised values start empty. Identify
 the buyer by the name on the invoice and SIREN (format only), a complete annual
 period and source/page references. The source PDF is archived as a SQLite BLOB,
@@ -527,3 +528,27 @@ Pricing reports include the fee, SME net proceeds and total SME cost in their
 audit snapshot. Saving recomputes the amounts server-side. A nonpositive net
 payment blocks financing. No migration is required: existing financed records
 keep their original terms and are never assigned a commission retroactively.
+
+
+## Buyer demo workspace
+
+Select **Buyer** in the role selector and select the buyer company. This filters
+Overview, Buyer confirmation, Buyer accounts and Portfolio to invoices naming
+that company. The selector is a demo navigation aid, **not authentication or
+access control**; visitors can still switch roles/companies. Do not use private
+production documents in this shared academic prototype.
+
+The buyer can confirm or dispute an invoice, supply a representative name and
+an acceptance declaration (or a dispute reason), and upload/review annual
+accounts through the existing PDF extraction and Z-double-prime workflow.
+Accounts remain attached to the selected invoice dossier. The buyer tracking
+view shows invoices payable; the supplier bears the financing cost and platform
+commission. No new identity or document-review approval is inferred from these
+actions, and providing accounts does not guarantee future payment.
+
+Workspace decisions are labelled `buyer_workspace_demo`, timestamped and saved
+atomically. Existing email decisions and financed/closed records cannot be
+overwritten, and a workspace decision also prevents a pending email link from
+changing the response. Email confirmation remains available without a buyer
+workspace visit. Existing SME/investor access to accounting dossiers is retained.
+No database migration, new service or additional secret is required.
