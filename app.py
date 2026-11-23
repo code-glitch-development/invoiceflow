@@ -506,5 +506,5 @@ elif page == 'Portfolio':
                         except ValueError as exc:
                             st.error(t(str(exc)))
 st.divider()
-st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Buyer confirmation uses a personal link without independent identity verification. No email is sent automatically.'))
+st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Buyer confirmation uses a personal link without independent identity verification. Automatic email requires a configured mail service.'))
 

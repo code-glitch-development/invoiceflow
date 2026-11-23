@@ -1,13 +1,24 @@
-"""Mail draft and a dedicated recipient page, with no external provider or credentials."""
+"""Optional automatic email, manual drafts and a dedicated buyer response page."""
 import os
 import streamlit as st
 from buyer_confirmation import (ConfirmationError, create_invitation, email_draft,
                                 inspect_invitation, respond)
 
 
+def mail_setting(name, default=''):
+    value = os.environ.get(name)
+    if value is not None:
+        return value
+    try:
+        return str(st.secrets.get(name, default))
+    except (FileNotFoundError, KeyError):
+        return default
+
+
 def render_confirmation(invoice, database, t, language):
+    from transactional_mail import BrevoClient, MailError, authorise_send, send_confirmation_email
     st.subheader(t('Request buyer confirmation'))
-    st.caption(t('Prepare a personal confirmation link, then send it from your own email app. No account, API key or installation is needed.'))
+    st.caption(t('Send the personal confirmation link directly from InvoiceFlow, or prepare an email for your own mailbox.'))
     st.caption(t('This is a confirmation by link. It does not independently verify the recipient identity or authority to represent the buyer.'))
     record = invoice.get('buyer_confirmation')
     if record:
@@ -22,31 +33,72 @@ def render_confirmation(invoice, database, t, language):
     elif invoice['buyer_status'] == 'Confirmed':
         st.info(t('This invoice is already confirmed. Existing confirmations have been preserved.'))
         return
-    default_url = os.environ.get('INVOICEFLOW_PUBLIC_URL') or getattr(getattr(st, 'context', None), 'url', '') or ''
+    api_key = mail_setting('BREVO_API_KEY')
+    sender = mail_setting('BREVO_SENDER_EMAIL')
+    expected_code = mail_setting('MAIL_SEND_CODE')
+    configured = bool(api_key and sender and len(expected_code) >= 12)
+    entered_code = ''
+    if not configured:
+        st.warning(t('Automatic email is not configured yet. No email will be sent by InvoiceFlow until setup is complete.'))
+        with st.expander(t('Set up free automatic email')):
+            st.write(t('Create a Brevo Free account, validate your sender and activate transactional sending. Add these values in Streamlit Settings → Secrets. No software installation is needed.'))
+            st.code('BREVO_API_KEY = "..."\nBREVO_SENDER_EMAIL = "your-verified-address@example.com"\nMAIL_SEND_CODE = "a-private-code-at-least-12-characters"', language='toml')
+            st.caption(t('Keep the API key private. Choose your own sending access code; it protects this shared demo from unauthorised email sending.'))
+    else:
+        entered_code = st.text_input(t('Mail sending access code'), type='password', key='mail_send_access_code')
+    delivery = record.get('email_delivery', {}) if record else {}
+    state = delivery.get('state')
+    if state == 'accepted':
+        st.success(t('The mail service accepted the email for sending to {email}. This does not confirm inbox delivery; check spam and Brevo logs if needed.', email=record['email']))
+    elif state in ('sending', 'unknown'):
+        st.warning(t('Email sending is pending or uncertain. Check Brevo transactional logs before sending again.'))
+    elif state == 'rejected':
+        st.error(t('The mail service rejected the last email. Check the sender, account and API configuration before trying again.'))
+    default_url = mail_setting('INVOICEFLOW_PUBLIC_URL') or getattr(getattr(st, 'context', None), 'url', '') or ''
     with st.form('confirmation_form_' + invoice['id']):
         email = st.text_input(t('Buyer email address'), value=invoice.get('buyer_email', ''), key='confirmation_email_' + invoice['id'])
         address = st.text_input(t('Public address of this app'), value=default_url,
                                 placeholder='https://your-app.streamlit.app/', key='confirmation_app_url_' + invoice['id'])
         st.caption(t('Use the address shown in your browser. The buyer must be able to open this app.'))
         replace = st.checkbox(t('Replace the previous link (it will stop working).'), key='confirmation_replace_' + invoice['id']) if record else False
-        prepare = st.form_submit_button(t('Prepare confirmation email'), type='primary')
-    if prepare:
+        auto = st.form_submit_button(t('Send confirmation email'), type='primary', disabled=not configured or state in ('sending', 'unknown'))
+        prepare = st.form_submit_button(t('Prepare confirmation email'), disabled=state in ('sending', 'unknown'))
+    if auto or prepare:
         try:
+            client = None
+            if auto:
+                authorise_send(entered_code, expected_code)
+                client = BrevoClient(api_key, sender, mail_setting('BREVO_SENDER_NAME', 'InvoiceFlow'))
             invitation = create_invitation(database, invoice['id'], email, address, replace=replace)
             st.session_state['confirmation_draft_' + invoice['id']] = invitation
+            if auto:
+                with st.spinner(t('Sending the confirmation email…')):
+                    send_confirmation_email(database, invoice['id'], invitation, client,
+                                            entered_code=entered_code, expected_code=expected_code, language=language)
             st.rerun()
         except ValueError as exc:
             st.error(t(str(exc)))
     draft = st.session_state.get('confirmation_draft_' + invoice['id'])
     if draft and record and draft['token_hash'] == record['token_hash']:
-        email = email_draft(invoice, draft, language)
-        st.success(t('Email prepared. Open your email app and send it yourself; InvoiceFlow has not sent any email.'))
-        st.link_button(t('Open my email app'), email['mailto'], type='primary')
+        message = email_draft(invoice, draft, language)
+        if state not in ('accepted', 'sending', 'unknown'):
+            st.info(t('A link is prepared, but InvoiceFlow has not sent an email. Use automatic sending below or open your own email app.'))
+            if st.button(t('Send this email automatically'), type='primary', disabled=not configured,
+                         key='mail_send_existing_' + invoice['id']):
+                try:
+                    with st.spinner(t('Sending the confirmation email…')):
+                        send_confirmation_email(database, invoice['id'], draft,
+                            BrevoClient(api_key, sender, mail_setting('BREVO_SENDER_NAME', 'InvoiceFlow')),
+                            entered_code=entered_code, expected_code=expected_code, language=language)
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(t(str(exc)))
+            st.link_button(t('Open my email app'), message['mailto'])
         with st.expander(t('Copy the link or email text')):
             st.caption(t('If your email app does not open, paste this message into your usual webmail.'))
             st.code(draft['link'], language=None)
-            st.text(email['subject'])
-            st.code(email['body'], language=None)
+            st.text(message['subject'])
+            st.code(message['body'], language=None)
     elif record:
         st.info(t('The existing link remains valid until expiry or response. To prepare a new email here, explicitly replace the previous link.'))
     st.button(t('Refresh buyer response'), key='confirmation_refresh_' + invoice['id'])

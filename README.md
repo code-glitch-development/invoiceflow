@@ -20,7 +20,7 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Open the address shown in the terminal, usually http://localhost:8501. The app opens without credentials. Buyer confirmation uses personal links and your own email composer.
+Open the address shown in the terminal, usually http://localhost:8501. The app opens without credentials. Buyer confirmation supports personal links, manual mail drafts and optional automatic email through Brevo.
 
 ## Language / Langue
 
@@ -55,15 +55,15 @@ The **Invoice checks** page lets the SME complete simulated identity/document ch
 
 The sidebar can clear the shared workspace only after an explicit deletion checkbox is selected. It never reloads sample invoices.
 
-## Buyer confirmation by personal link (no external service)
+## Buyer confirmation by personal link
 
 Use **SME → Buyer confirmation**. Enter the buyer email and the public address of
 this InvoiceFlow app (normally prefilled from the browser), then click **Prepare
 confirmation email**. **Open my email app** uses `mailto:` to open your configured
 mail composer; you must send the message yourself. If no composer opens, expand
 **Copy the link or email text** and paste it into Gmail, Outlook or another
-webmail. No API account, key, SMTP configuration, extra package or payment is
-required. Preparing a link does not send a message or prove delivery.
+webmail. This manual option requires no API account, key, SMTP configuration, extra
+package or payment. Preparing a link does not send a message or prove delivery.
 
 The recipient opens the deployed app using a personal random link. Their page
 shows only the referenced invoice details, a name field, Confirm/Dispute, an
@@ -109,6 +109,65 @@ are no longer read. Legacy signature metadata is preserved but no provider
 API is called. No database migration is needed. Reset or loss of the SQLite
 file invalidates its links; preparing a new one cannot recover a deleted record.
 
+## Automatic email through Brevo (optional Free plan)
+
+The **Send confirmation email** button sends the link from the application via
+Brevo's HTTPS API; no software installation, SMTP ports or extra Python package
+is needed. **Prepare confirmation email** still only creates a manual draft.
+The buyer confirmation remains the same personal-link workflow, with no certified
+signature or independent identity verification.
+
+Brevo currently advertises a Free plan including up to 300 transactional emails
+per day without a credit card. Choose that plan and stay within its quota; this
+app does not sign up for or upgrade any subscription. Availability, account
+activation, sender/domain verification and delivery restrictions are controlled
+by Brevo. Check current terms in your account. Sender verification and any domain
+authentication requested by the provider must be completed before sending.
+
+Create a free account, register and verify your sender, enable transactional
+sending if needed, and create an API key (not an SMTP password). In Streamlit
+Cloud → Settings → Secrets, add:
+
+```toml
+BREVO_API_KEY = "your-private-brevo-api-key"
+BREVO_SENDER_EMAIL = "your-verified-sender@example.com"
+MAIL_SEND_CODE = "a-private-random-code-of-at-least-12-characters"
+```
+
+Optional: `BREVO_SENDER_NAME="InvoiceFlow"`. The sender is fixed in server
+configuration, not taken from public form inputs. `MAIL_SEND_CODE` is a private
+operator code chosen by you, entered on the confirmation page before an automatic
+send. It protects this unauthenticated shared demo from unauthorised sending.
+Never put API keys in GitHub, recipient links, form fields or chat. Without the
+configuration, automatic send is disabled and the app explicitly says no mail
+will be sent. The manual copy/composer path remains available.
+
+Configure a reachable public app address, enter the recipient, supply the sending
+code and click **Send confirmation email**. A successful API response stores
+its message identifier and displays **accepted for sending**. This is not proof
+of delivery, mailbox ownership or buyer approval. Check the recipient's spam
+folder and Brevo Transactional logs for delivery/bounce details. This version
+has no delivery-event webhook or live inbox-status tracking. Only the buyer's
+separate response confirms/disputes the invoice.
+
+Each attempt is reserved in the invoice JSON before the network call. Refreshing
+or double-clicking cannot send the same invitation twice. A definitive rejection
+allows an explicit retry after correction. A timeout, ambiguous HTTP error or
+malformed response is recorded as uncertain; resend and link replacement are
+blocked until an operator checks the provider logs. There is no automatic retry.
+An unfinished attempt left by a server crash also stays blocked. Inspect its
+attempt tag in Brevo logs and back up the database before any manual recovery.
+The response merge preserves a buyer decision received during the send. Accepted
+emails may be sent again only by explicitly replacing the link (which invalidates
+the old email's link) and submitting a new invitation.
+
+No real email was sent in automated tests: network responses are mocked. Account
+activation and a live delivery test must be completed by the account owner.
+
+[Free plan and API](https://www.brevo.com/fr/products/transactional-email/),
+[send API](https://developers.brevo.com/docs/send-a-transactional-email),
+[sender setup](https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email).
+
 ## Model and limitations
 
 - Roles are freely interchangeable for presentation purposes: there is no authentication or access control.
@@ -130,7 +189,7 @@ file invalidates its links; preparing a new one cannot recover a deleted record.
 
 ## Deploy to Streamlit Community Cloud
 
-Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. Buyer confirmation requires no secrets or external service. All visitors share the same saved demo dataset.
+Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. Manual mail drafts require no secrets. Automatic mail requires the Brevo configuration below. All visitors share the same saved demo dataset.
 
 `packages.txt` installs Tesseract and French/English language data on Community Cloud. For local OCR on Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-fra` and `tesseract-ocr-eng` with the system package manager; on macOS use `brew install tesseract tesseract-lang`. On Windows install Tesseract with the required languages and add its executable to PATH. Without the OCR executable, selectable-text PDFs still work and image uploads can be entered manually.
 

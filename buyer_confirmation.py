@@ -1,4 +1,4 @@
-"""Single-use buyer confirmation links. No email service, external API or signing claim."""
+"""Single-use buyer confirmation links, independent of the optional mail transport."""
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import hmac
@@ -84,6 +84,8 @@ def create_invitation(store, invoice_id, email, app_url, *, replace=False, now=N
         old = invoice.get('buyer_confirmation')
         if old and old['status'] != 'pending':
             raise ConfirmationError('The buyer has already responded. Their decision cannot be overwritten.')
+        if old and old.get('email_delivery', {}).get('state') in ('sending', 'unknown'):
+            raise ConfirmationError('Email sending is pending or uncertain. Check Brevo logs before replacing this link.')
         if old and not replace:
             raise ConfirmationError('A link already exists. Explicitly replace it to invalidate the previous link.')
         record = dict(status='pending', email=email, token_hash=sha256(token.encode()).hexdigest(),

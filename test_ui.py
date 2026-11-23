@@ -330,11 +330,42 @@ class InterfaceTests(unittest.TestCase):
         saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
         self.assertEqual(saved['buyer_status'], 'Pending')
         self.assertFalse(eligible(saved))
-        self.assertTrue(any('has not sent any email' in s.value for s in at.success))
+        self.assertTrue(any('has not sent an email' in s.value for s in at.info))
         self.assertNotIn(invitation['token'], str(saved))
         at.sidebar.radio(key='language').set_value('FR').run()
         self.assertFalse(at.exception)
         self.assertEqual(at.session_state['confirmation_draft_' + identifier]['token'], invitation['token'])
+
+    def test_automatic_mail_setup_and_single_send(self):
+        from unittest.mock import Mock
+        at = self.app()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
+        pending = next(i for i in at.session_state['invoices'] if i['buyer_status']=='Pending' and not i.get('financing'))
+        identifier = pending['id']
+        at.selectbox(key='signature_pick').set_value(identifier).run()
+        self.assertTrue(next(b for b in at.button if b.label=='Send confirmation email').disabled)
+        client = Mock(send=Mock(return_value='<message@example.com>'))
+        with patch.dict('os.environ', {'BREVO_API_KEY':'test-key','BREVO_SENDER_EMAIL':'sender@example.com',
+                                      'MAIL_SEND_CODE':'private-send-code'}), patch('transactional_mail.BrevoClient',return_value=client):
+            at.run()
+            self.assertFalse(at.exception)
+            at.text_input(key='confirmation_email_'+identifier).set_value('buyer@example.com')
+            at.text_input(key='confirmation_app_url_'+identifier).set_value('https://invoiceflow.streamlit.app/')
+            # Wrong access code must not create a link or send a message.
+            next(b for b in at.button if b.label=='Send confirmation email').click().run()
+            self.assertFalse(at.exception)
+            client.send.assert_not_called()
+            self.assertNotIn('buyer_confirmation', next(i for i in at.session_state['invoices'] if i['id']==identifier))
+            at.text_input(key='mail_send_access_code').set_value('private-send-code').run()
+            next(b for b in at.button if b.label=='Send confirmation email').click().run()
+            self.assertFalse(at.exception)
+            self.assertEqual(client.send.call_count,1)
+            saved=next(i for i in at.session_state['invoices'] if i['id']==identifier)
+            self.assertEqual(saved['buyer_status'],'Pending')
+            self.assertEqual(saved['buyer_confirmation']['email_delivery']['state'],'accepted')
+            self.assertTrue(any('accepted the email' in x.value for x in at.success))
+            at.run()
+            self.assertEqual(client.send.call_count,1)
 
     def test_recipient_can_confirm_without_workspace_access(self):
         import os
