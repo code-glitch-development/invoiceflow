@@ -4,7 +4,7 @@ from engine import eligible
 
 WORKSPACES = {
     'SME': {
-        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Portfolio'],
+        'pages': ['Overview', 'Upload an invoice', 'Invoice checks', 'Buyer signature', 'Portfolio'],
         'title': 'SME workspace',
         'headline': 'Turn your invoices into cash flow.',
         'description': 'Submit an invoice, complete its file and follow its financing.',
@@ -12,16 +12,6 @@ WORKSPACES = {
         'action': 'Upload an invoice',
         'target': 'Upload an invoice',
         'steps': ['Upload an invoice', 'Complete an invoice file', 'Invoice and transaction tracking'],
-    },
-    'Buyer': {
-        'pages': ['Overview', 'Buyer confirmation', 'Portfolio'],
-        'title': 'Buyer workspace',
-        'headline': 'Review your supplier invoices.',
-        'description': 'Check the service, amount and due date, then confirm or dispute.',
-        'section': 'Supplier invoices awaiting your decision',
-        'action': 'Review supplier invoices',
-        'target': 'Buyer confirmation',
-        'steps': ['Review supplier invoices', 'Confirm', 'Dispute'],
     },
     'Investor': {
         'pages': ['Overview', 'Compare opportunities', 'Portfolio', 'Simulation assumptions', 'Financing', 'Simulator'],
@@ -48,11 +38,6 @@ def overview(role, invoices):
                    ('Invoice files to complete', len(incomplete), False),
                    ('Simulated advances', sum(i['financing']['advance'] for i in financed), True)]
         items = invoices
-    elif role == 'Buyer':
-        metrics = [('Invoices awaiting confirmation', len(pending), False),
-                   ('Amount awaiting confirmation', sum(i['amount'] for i in pending), True),
-                   ('Disputed invoices', sum(i['buyer_status'] == 'Disputed' for i in invoices), False)]
-        items = pending
     else:
         metrics = [('Eligible for financing simulation', len(available), False),
                    ('Eligible invoice volume', sum(i['amount'] for i in available), True),

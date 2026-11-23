@@ -20,7 +20,7 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-Open the address shown in the terminal, usually http://localhost:8501. No API key is required.
+Open the address shown in the terminal, usually http://localhost:8501. The app opens without credentials; sending signature invitations requires the configuration below.
 
 ## Language / Langue
 
@@ -37,15 +37,14 @@ Les factures et leurs financements sont conservés. Validez un formulaire ouvert
 
 The demo role selector opens a distinct workspace and returns to its overview:
 
-- **SME:** upload, invoice checks and tracking; submitted volume, incomplete files and simulated advances.
-- **Buyer:** confirmation and tracking; pending decisions, their total amount and disputes.
+- **SME:** upload, invoice checks, buyer signature invitations and tracking; submitted volume, incomplete files and simulated advances.
 - **Investor:** financing, simulator and portfolio; eligible invoices, their volume and outstanding advances.
 
 Each overview has its own headline, primary action and invoice queue. Guided next-step buttons still switch to the appropriate role and invoice automatically. Changing language preserves the selected role, page and saved data. These are presentation workspaces over the shared demo dataset, not access controls.
 
 1. Open **SME → Overview**. New workspaces start empty; upload or enter your own invoice to begin.
 2. Select **SME → Upload an invoice**. Enter a new invoice reference, a fictional 9-digit SIREN, an amount and a future due date. Select **Strong** and **On time**, and tick both simulated checks.
-3. Select **Buyer → Buyer confirmation**. Choose the buyer and invoice, check the confirmation box and save. You can also dispute an invoice with a reason.
+3. Select **SME → Buyer signature**. Enter the buyer representative’s email, first and last name. With the signature provider configured, enter the signature access code and send the invitation. The buyer opens the provider email and signs without an InvoiceFlow account. Click **Check signature status** afterwards; the invoice remains pending until the provider confirms completion. In sandbox, this is explicitly a test signature without legal effect.
 4. Select **Investor → Financing**. Choose the confirmed invoice, adjust the fee, recourse and hypothetical coverage, then simulate financing.
 5. Open **Portfolio** to export CSV or JSON, and simulate late payment, a dispute, insolvency or full payment.
 6. Use **Simulator** independently to explore advances, losses and hypothetical monthly and annual fee revenue.
@@ -55,6 +54,80 @@ The **Invoice progress** view shows Submitted → Confirmed → Eligible → Fin
 The **Invoice checks** page lets the SME complete simulated identity/document checks without changing confirmed invoice terms. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Low scores, disputes and expired due dates are never bypassed.
 
 The sidebar can clear the shared workspace only after an explicit deletion checkbox is selected. It never reloads sample invoices.
+
+## Buyer electronic signature (Yousign API v3)
+
+The Buyer workspace and its self-confirmation form have been removed. The SME
+enters the recipient email (optionally during upload) and sends an invitation
+from **SME → Buyer signature**. Existing records and confirmations are preserved;
+no invoice is silently re-approved or deleted. No database migration is required:
+signature metadata is stored in the existing versioned invoice JSON payload.
+
+Create a Yousign API account and configure Streamlit Cloud → app settings →
+Secrets (or local `.streamlit/secrets.toml`, excluded from source control):
+
+```toml
+YOUSIGN_API_KEY = "your-private-api-key"
+YOUSIGN_ENVIRONMENT = "sandbox"
+SIGNATURE_SEND_CODE = "a-private-random-code-of-at-least-12-characters"
+```
+
+The last value is a private operator code, entered on the signature page to
+protect sending, status queries and document retrieval in this otherwise shared,
+unauthenticated demonstration. The API key stays on the server. Do not commit
+secrets or give the operator code to recipients; buyers use the provider email.
+Missing configuration leaves the rest of the app operational, displays a clear
+setup message, and disables sending. Merely entering an email never sends mail.
+Each invitation requires explicit recipient confirmation and the send button.
+
+The implementation creates a separate **French confirmation attestation**, not
+a signed copy of the uploaded original, because original invoice bytes are not
+archived. The attestation identifies supplier, buyer, SIREN, reference, amount,
+issue/due dates and recipient. It contains the declaration of representation,
+service/delivery, amount, due date, unpaid and undisputed status; it expressly
+excludes a transfer of the claim or payment guarantee. Metadata and original-file
+hashes bind it to the submitted record. The unsigned attestation can be downloaded
+for review before sending.
+
+The provider emails the signing link (`delivery_mode=email`). Signing uses
+**simple electronic signature with email OTP**, not advanced or qualified
+signature, verified civil identity or verified authority to represent a company.
+Signing links are neither displayed to the SME nor stored in exports. Invitation
+acceptance by the API is not proof of mail delivery or signature. Status refresh
+makes a server-side API call: only a `done` request containing the expected signed
+signer can confirm the unchanged invoice. A decline disputes the invoice;
+ongoing, expired or canceled requests do not approve it. Status is refreshed by
+the explicit button; this version has no real-time webhook receiver. After
+completion, the signed PDF and provider audit-trail archive can be retrieved.
+
+**Sandbox:** test signatures have no legal effect; trial/freemium organisations
+may only send to their own organisation members unless the provider authorises
+external recipients. Start by inviting your own account email for the demo.
+Production needs the corresponding API subscription/key and explicit
+`YOUSIGN_ENVIRONMENT="production"`. Do not present sandbox completion as real
+buyer approval or a legally binding signature. Financing remains simulated in
+both environments. For real customer data, user authentication, tenant isolation,
+authorisation, secure persistent storage and legal review are still required.
+
+A persistent reservation prevents double sends across browser sessions. Each
+remote identifier is saved before the next API step. Network failures leave the
+invoice unconfirmed and record an incomplete/uncertain attempt. If activation
+timed out, **Check signature status** can recover an invitation that actually
+succeeded. For failures earlier in preparation, inspect the provider dashboard
+and finish/cancel that remote draft there; the app does not automatically retry
+or create another invitation. If creation itself timed out before the request ID
+was saved, locate it by the external invoice/attempt ID in the provider dashboard
+before any operator intervention. Clearing local invoices does **not** cancel
+provider requests. Back up the database before reset.
+
+This integration is tested with mocked provider responses. It has not been
+verified with a real account until the account owner configures credentials and
+completes an end-to-end sandbox signing test.
+
+Provider documentation:
+[request lifecycle](https://developers.youtrust.com/docs/create-your-first-signature-request),
+[email authentication](https://developers.youtrust.com/docs/choose-the-signature-request-authentication-mode),
+[environments and sandbox restrictions](https://developers.youtrust.com/docs/environments-new).
 
 ## Model and limitations
 
@@ -77,7 +150,7 @@ The sidebar can clear the shared workspace only after an explicit deletion check
 
 ## Deploy to Streamlit Community Cloud
 
-Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. All visitors share the same saved demo dataset.
+Select the GitHub repository, the `main` branch and `app.py` as the main file. No secrets are required for the local SQLite default. Signature invitations require the three secrets documented below. All visitors share the same saved demo dataset.
 
 `packages.txt` installs Tesseract and French/English language data on Community Cloud. For local OCR on Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-fra` and `tesseract-ocr-eng` with the system package manager; on macOS use `brew install tesseract tesseract-lang`. On Windows install Tesseract with the required languages and add its executable to PATH. Without the OCR executable, selectable-text PDFs still work and image uploads can be entered manually.
 

@@ -41,7 +41,7 @@ class InterfaceTests(unittest.TestCase):
             at = self.app()
             self.assertFalse(at.exception)
             self.assertEqual(at.session_state['invoices'], [])
-            for role in ('SME', 'Buyer', 'Investor'):
+            for role in ('SME', 'Investor'):
                 at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
                 for page in WORKSPACES[role]['pages']:
                     at.sidebar.radio(key='ui_navigation').set_value(page).run()
@@ -86,7 +86,7 @@ class InterfaceTests(unittest.TestCase):
     def test_all_screens(self):
         from workspaces import WORKSPACES
         at = self.app()
-        for profile in ['SME', 'Buyer', 'Investor']:
+        for profile in ['SME', 'Investor']:
             at.sidebar.selectbox(key='ui_demo_role').set_value(profile).run()
             for page in WORKSPACES[profile]['pages']:
                 at.sidebar.radio(key='ui_navigation').set_value(page).run()
@@ -285,7 +285,7 @@ class InterfaceTests(unittest.TestCase):
         for language in ['EN', 'FR']:
             at.sidebar.radio(key='language').set_value(language).run()
             translate = Translator(language).text
-            for role in ['Buyer', 'Investor', 'SME']:
+            for role in ['Investor', 'SME']:
                 at.sidebar.selectbox(key='ui_demo_role').set_value(role).run()
                 self.assertFalse(at.exception)
                 self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Overview')
@@ -305,12 +305,59 @@ class InterfaceTests(unittest.TestCase):
 
     def test_language_change_keeps_role_page(self):
         at = self.app()
-        at.sidebar.selectbox(key='ui_demo_role').set_value('Buyer').run()
-        at.sidebar.radio(key='ui_navigation').set_value('Buyer confirmation').run()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('SME').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
         at.sidebar.radio(key='language').set_value('FR').run()
         self.assertFalse(at.exception)
-        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'Buyer')
-        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer confirmation')
+        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'SME')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer signature')
+
+    def test_signature_not_configured_is_explicit_and_cannot_send(self):
+        from signature_ui import render_signature
+        from engine import seed
+        from streamlit.testing.v1 import AppTest
+        at = self.app()
+        self.assertNotIn('Buyer', at.sidebar.selectbox(key='ui_demo_role').options)
+        at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
+        pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
+        at.selectbox(key='signature_pick').set_value(pending['id']).run()
+        self.assertFalse(at.exception)
+        self.assertTrue(at.button(key='FormSubmitter:signature_form_' + pending['id'] + '-Send signature invitation').disabled)
+        self.assertTrue(any('not configured' in w.value for w in at.warning))
+        self.assertFalse(any(b.label == 'Save decision' for b in at.button))
+
+    def test_signature_form_sends_once_then_confirms_only_after_provider_refresh(self):
+        import os
+        from unittest.mock import Mock
+        client = Mock(environment='sandbox')
+        client.request.side_effect = [{'id': 'request'}, {'id': 'document'}, {'id': 'signer'}, {'status': 'ongoing'}]
+        with patch.dict('os.environ', {'YOUSIGN_API_KEY': 'test-key', 'YOUSIGN_ENVIRONMENT': 'sandbox',
+                                      'SIGNATURE_SEND_CODE': 'private-demo-code'}), patch('signature_ui.YousignClient', return_value=client):
+            at = self.app()
+            at.sidebar.radio(key='ui_navigation').set_value('Buyer signature').run()
+            pending = next(i for i in at.session_state['invoices'] if i['buyer_status'] == 'Pending' and not i.get('financing'))
+            identifier = pending['id']
+            at.selectbox(key='signature_pick').set_value(identifier).run()
+            self.assertFalse(at.exception)
+            at.text_input(key='signature_access_code').set_value('private-demo-code').run()
+            at.text_input(key='signature_email_' + identifier).set_value('buyer@example.com')
+            at.text_input(key='signature_first_' + identifier).set_value('Jane')
+            at.text_input(key='signature_last_' + identifier).set_value('Doe')
+            at.checkbox(key='signature_consent_' + identifier).check()
+            next(b for b in at.button if b.label == 'Send signature invitation').click().run()
+            self.assertFalse(at.exception)
+            saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
+            self.assertEqual(saved['buyer_status'], 'Pending')
+            self.assertEqual(saved['signature']['state'], 'ongoing')
+            self.assertFalse(any(b.label == 'Send signature invitation' for b in at.button))
+            client.request.side_effect = None
+            client.request.return_value = {'id': 'request', 'status': 'done',
+                                           'signers': [{'id': 'signer', 'status': 'signed'}]}
+            at.button(key='signature_refresh_' + identifier).click().run()
+            self.assertFalse(at.exception)
+            saved = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
+            self.assertEqual(saved['buyer_status'], 'Confirmed')
+            self.assertEqual(saved['signature']['state'], 'done')
 
     def test_financing_and_payment(self):
         at = self.app()
@@ -501,11 +548,11 @@ class InterfaceTests(unittest.TestCase):
         # The second sample awaits buyer confirmation.
         invoice = at.session_state['invoices'][1]
         at.selectbox(key='overview_pick').set_value(invoice['id']).run()
-        next(b for b in at.button if b.label == 'Next: buyer confirmation').click().run()
+        next(b for b in at.button if b.label == 'Next: request buyer signature').click().run()
         self.assertFalse(at.exception)
-        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'Buyer')
-        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer confirmation')
-        self.assertEqual(at.selectbox(key='confirm_pick').value, invoice['id'])
+        self.assertEqual(at.sidebar.selectbox(key='ui_demo_role').value, 'SME')
+        self.assertEqual(at.sidebar.radio(key='ui_navigation').value, 'Buyer signature')
+        self.assertEqual(at.selectbox(key='signature_pick').value, invoice['id'])
 
 
 if __name__ == '__main__':

@@ -273,29 +273,7 @@ FR = {' %** · Hypothetical coverage: **': ' %** · Couverture hypothétique : *
  'Invoice {p0} submitted. Switch to the Buyer role to confirm it.': 'Facture {p0} déposée. Passez au profil '
                                                                     'Client final pour la confirmer.',
  'Invoice, purchase order, delivery': 'Facture, commande, livraison',
- 'InvoiceFlow · Academic demo based on your concept. Confirmation, scoring, insurance and financing are simulated; no banking service, external register or blockchain is connected.': 'InvoiceFlow '
-                                                                                                                                                                                       '· '
-                                                                                                                                                                                       'Démonstrateur '
-                                                                                                                                                                                       'académique '
-                                                                                                                                                                                       'basé '
-                                                                                                                                                                                       'sur '
-                                                                                                                                                                                       'votre '
-                                                                                                                                                                                       'concept. '
-                                                                                                                                                                                       'Validation, '
-                                                                                                                                                                                       'score, '
-                                                                                                                                                                                       'assurance '
-                                                                                                                                                                                       'et '
-                                                                                                                                                                                       'financement '
-                                                                                                                                                                                       'simulés '
-                                                                                                                                                                                       '; '
-                                                                                                                                                                                       'aucun '
-                                                                                                                                                                                       'service '
-                                                                                                                                                                                       'bancaire, '
-                                                                                                                                                                                       'registre '
-                                                                                                                                                                                       'externe '
-                                                                                                                                                                                       'ou '
-                                                                                                                                                                                       'blockchain '
-                                                                                                                                                                                       'connecté.',
+ 'InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Electronic signature requires a configured provider; sandbox signatures have no legal effect.': 'InvoiceFlow · Prototype pédagogique. Le scoring, l’assurance et le financement sont simulés. La signature électronique nécessite un prestataire configuré ; les signatures en mode test n’ont pas de valeur juridique.',
  'InvoiceFlow · EN / FR': 'FactureFlow · EN / FR',
  'InvoiceFlow ↗': 'FactureFlow ↗',
  'Invoices awaiting confirmation': 'Factures à confirmer',
@@ -1169,6 +1147,288 @@ FR.update({
     'The annual indicator is a capital-weighted average of the original continuous rates on unpaid invoices. It is not a cash-flow IRR or a guaranteed return.': 'L’indicateur annuel est la moyenne des taux continus initiaux des factures non remboursées, pondérée par les avances. Ce n’est ni un taux de rentabilité interne des flux ni un rendement garanti.',
     'Annual rates are derived from the saved advance, full-payment proceeds, financing date and expected payment date (or due date in manual mode). Independent theoretical-interest settings are excluded.': 'Les taux annuels sont déduits de l’avance enregistrée, du paiement intégral prévu, de la date de financement et de la date de paiement prévue (ou de l’échéance en mode manuel). Les réglages indépendants d’intérêts théoriques sont exclus.',
 })
+
+
+FR.update({'Buyer signature': 'Signature acheteur',
+ 'Next: request buyer signature': 'Suite : demander la signature de l’acheteur',
+ 'Buyer email address (optional)': 'Adresse mail de l’acheteur (facultative)',
+ 'Buyer email address': 'Adresse mail de l’acheteur',
+ 'Invoice {p0} submitted. Request the buyer signature from the SME workspace.': 'Facture {p0} déposée. Demandez '
+                                                                                'la signature de l’acheteur '
+                                                                                'depuis l’espace PME.',
+ 'Identity and document checks remain demo declarations. Electronic signatures are verified separately with the signature service.': 'Les '
+                                                                                                                                     'contrôles '
+                                                                                                                                     'd’identité '
+                                                                                                                                     'et '
+                                                                                                                                     'de '
+                                                                                                                                     'documents '
+                                                                                                                                     'restent '
+                                                                                                                                     'déclaratifs '
+                                                                                                                                     'pour '
+                                                                                                                                     'la '
+                                                                                                                                     'démonstration. '
+                                                                                                                                     'Les '
+                                                                                                                                     'signatures '
+                                                                                                                                     'électroniques '
+                                                                                                                                     'sont '
+                                                                                                                                     'vérifiées '
+                                                                                                                                     'séparément '
+                                                                                                                                     'auprès '
+                                                                                                                                     'du '
+                                                                                                                                     'service '
+                                                                                                                                     'de '
+                                                                                                                                     'signature.',
+ 'Buyer signature environment: {environment} · status: {state}': 'Environnement de signature acheteur : '
+                                                                 '{environment} · statut : {state}',
+ 'Request the buyer signature': 'Demander la signature de l’acheteur',
+ 'The buyer receives an email and signs a confirmation attestation outside InvoiceFlow. No buyer account is needed.': 'L’acheteur '
+                                                                                                                      'reçoit '
+                                                                                                                      'un '
+                                                                                                                      'mail '
+                                                                                                                      'et '
+                                                                                                                      'signe '
+                                                                                                                      'une '
+                                                                                                                      'attestation '
+                                                                                                                      'de '
+                                                                                                                      'confirmation '
+                                                                                                                      'en '
+                                                                                                                      'dehors '
+                                                                                                                      'd’InvoiceFlow. '
+                                                                                                                      'Aucun '
+                                                                                                                      'compte '
+                                                                                                                      'acheteur '
+                                                                                                                      'n’est '
+                                                                                                                      'nécessaire.',
+ 'The attestation contains the invoice details and a declaration about the service, amount, due date and absence of payment or dispute. It is separate from the original invoice.': 'L’attestation '
+                                                                                                                                                                                    'reprend '
+                                                                                                                                                                                    'les '
+                                                                                                                                                                                    'informations '
+                                                                                                                                                                                    'de '
+                                                                                                                                                                                    'la '
+                                                                                                                                                                                    'facture '
+                                                                                                                                                                                    'et '
+                                                                                                                                                                                    'une '
+                                                                                                                                                                                    'déclaration '
+                                                                                                                                                                                    'sur '
+                                                                                                                                                                                    'la '
+                                                                                                                                                                                    'prestation, '
+                                                                                                                                                                                    'le '
+                                                                                                                                                                                    'montant, '
+                                                                                                                                                                                    'l’échéance '
+                                                                                                                                                                                    'et '
+                                                                                                                                                                                    'l’absence '
+                                                                                                                                                                                    'de '
+                                                                                                                                                                                    'paiement '
+                                                                                                                                                                                    'ou '
+                                                                                                                                                                                    'de '
+                                                                                                                                                                                    'litige. '
+                                                                                                                                                                                    'Elle '
+                                                                                                                                                                                    'est '
+                                                                                                                                                                                    'distincte '
+                                                                                                                                                                                    'de '
+                                                                                                                                                                                    'la '
+                                                                                                                                                                                    'facture '
+                                                                                                                                                                                    'originale.',
+ 'Test mode: signatures have no legal effect. Trial accounts may only email members of the Yousign organisation.': 'Mode '
+                                                                                                                   'test '
+                                                                                                                   ': '
+                                                                                                                   'les '
+                                                                                                                   'signatures '
+                                                                                                                   'n’ont '
+                                                                                                                   'pas '
+                                                                                                                   'de '
+                                                                                                                   'valeur '
+                                                                                                                   'juridique. '
+                                                                                                                   'Les '
+                                                                                                                   'comptes '
+                                                                                                                   'd’essai '
+                                                                                                                   'peuvent '
+                                                                                                                   'limiter '
+                                                                                                                   'les '
+                                                                                                                   'envois '
+                                                                                                                   'aux '
+                                                                                                                   'membres '
+                                                                                                                   'de '
+                                                                                                                   'l’organisation '
+                                                                                                                   'Yousign.',
+ 'Simple electronic signature with an email verification code. This does not verify identity or authority to represent the buyer.': 'Signature '
+                                                                                                                                    'électronique '
+                                                                                                                                    'simple '
+                                                                                                                                    'avec '
+                                                                                                                                    'code '
+                                                                                                                                    'de '
+                                                                                                                                    'vérification '
+                                                                                                                                    'par '
+                                                                                                                                    'mail. '
+                                                                                                                                    'Ce '
+                                                                                                                                    'procédé '
+                                                                                                                                    'ne '
+                                                                                                                                    'vérifie '
+                                                                                                                                    'ni '
+                                                                                                                                    'l’identité '
+                                                                                                                                    'ni '
+                                                                                                                                    'l’habilitation '
+                                                                                                                                    'à '
+                                                                                                                                    'représenter '
+                                                                                                                                    'l’acheteur.',
+ 'Electronic signature is not configured. No invitation can be sent yet.': 'La signature électronique n’est pas '
+                                                                           'configurée. Aucun envoi n’est encore '
+                                                                           'possible.',
+ 'Signature service setup': 'Configuration du service de signature',
+ 'In Streamlit secrets, add a Yousign API key, choose sandbox or production, and set a sending access code of at least 12 characters. Never paste the API key into this page.': 'Dans '
+                                                                                                                                                                                'les '
+                                                                                                                                                                                'secrets '
+                                                                                                                                                                                'Streamlit, '
+                                                                                                                                                                                'ajoutez '
+                                                                                                                                                                                'une '
+                                                                                                                                                                                'clé '
+                                                                                                                                                                                'API '
+                                                                                                                                                                                'Yousign, '
+                                                                                                                                                                                'choisissez '
+                                                                                                                                                                                'sandbox '
+                                                                                                                                                                                'ou '
+                                                                                                                                                                                'production, '
+                                                                                                                                                                                'et '
+                                                                                                                                                                                'définissez '
+                                                                                                                                                                                'un '
+                                                                                                                                                                                'code '
+                                                                                                                                                                                'd’accès '
+                                                                                                                                                                                'à '
+                                                                                                                                                                                'l’envoi '
+                                                                                                                                                                                'd’au '
+                                                                                                                                                                                'moins '
+                                                                                                                                                                                '12 '
+                                                                                                                                                                                'caractères. '
+                                                                                                                                                                                'Ne '
+                                                                                                                                                                                'collez '
+                                                                                                                                                                                'jamais '
+                                                                                                                                                                                'la '
+                                                                                                                                                                                'clé '
+                                                                                                                                                                                'API '
+                                                                                                                                                                                'sur '
+                                                                                                                                                                                'cette '
+                                                                                                                                                                                'page.',
+ 'Signature access code': 'Code d’accès aux signatures',
+ 'Invalid signature access code.': 'Code d’accès aux signatures incorrect.',
+ 'Signature status': 'Statut de la signature',
+ 'Recipient': 'Destinataire',
+ 'This request belongs to the test environment. It is not a legally binding signature.': 'Cette demande '
+                                                                                         'appartient à '
+                                                                                         'l’environnement de '
+                                                                                         'test. Cette signature '
+                                                                                         'n’a pas de valeur '
+                                                                                         'juridique.',
+ 'Sending is incomplete or uncertain. Check the Yousign dashboard before any new invitation. This app blocks duplicate sends.': 'L’envoi '
+                                                                                                                                'est '
+                                                                                                                                'incomplet '
+                                                                                                                                'ou '
+                                                                                                                                'incertain. '
+                                                                                                                                'Vérifiez '
+                                                                                                                                'le '
+                                                                                                                                'tableau '
+                                                                                                                                'de '
+                                                                                                                                'bord '
+                                                                                                                                'Yousign '
+                                                                                                                                'avant '
+                                                                                                                                'toute '
+                                                                                                                                'nouvelle '
+                                                                                                                                'invitation. '
+                                                                                                                                'L’app '
+                                                                                                                                'bloque '
+                                                                                                                                'les '
+                                                                                                                                'doubles '
+                                                                                                                                'envois.',
+ 'Check signature status': 'Vérifier le statut de la signature',
+ 'Checking the signature service…': 'Vérification auprès du service de signature…',
+ 'Retrieve signed documents': 'Récupérer les documents signés',
+ 'Download signed attestation': 'Télécharger l’attestation signée',
+ 'Download signature audit trail': 'Télécharger le dossier de preuve',
+ 'This invoice is already confirmed. Existing confirmations have been preserved.': 'Cette facture est déjà '
+                                                                                   'confirmée. Les confirmations '
+                                                                                   'existantes ont été '
+                                                                                   'conservées.',
+ 'Signer first name': 'Prénom du signataire',
+ 'Signer last name': 'Nom du signataire',
+ 'I have checked the recipient and want to send this invoice confirmation for signature.': 'J’ai vérifié le '
+                                                                                           'destinataire et je '
+                                                                                           'souhaite lui envoyer '
+                                                                                           'cette confirmation de '
+                                                                                           'facture pour '
+                                                                                           'signature.',
+ 'Send signature invitation': 'Envoyer la demande de signature',
+ 'Check the recipient confirmation box before sending.': 'Cochez la confirmation du destinataire avant l’envoi.',
+ 'Sending the signature invitation…': 'Envoi de la demande de signature…',
+ 'The signature service accepted the invitation. The invoice remains unconfirmed until the signature is checked.': 'Le '
+                                                                                                                   'service '
+                                                                                                                   'de '
+                                                                                                                   'signature '
+                                                                                                                   'a '
+                                                                                                                   'accepté '
+                                                                                                                   'l’invitation. '
+                                                                                                                   'La '
+                                                                                                                   'facture '
+                                                                                                                   'reste '
+                                                                                                                   'non '
+                                                                                                                   'confirmée '
+                                                                                                                   'jusqu’à '
+                                                                                                                   'la '
+                                                                                                                   'vérification '
+                                                                                                                   'de '
+                                                                                                                   'la '
+                                                                                                                   'signature.',
+ 'Preview the attestation to sign': 'Télécharger l’attestation à signer',
+ 'Enter a valid buyer email address.': 'Saisissez une adresse mail valide pour l’acheteur.',
+ 'Invalid signature service environment.': 'Environnement du service de signature incorrect.',
+ 'The electronic signature service is not configured.': 'Le service de signature électronique n’est pas '
+                                                        'configuré.',
+ 'The signature service returned an oversized response.': 'Le service de signature a renvoyé une réponse trop '
+                                                          'volumineuse.',
+ 'The signature service rejected the request. Check its configuration and dashboard.': 'Le service de signature a '
+                                                                                       'refusé la demande. '
+                                                                                       'Vérifiez sa configuration '
+                                                                                       'et son tableau de bord.',
+ 'Signature service unavailable. Check its dashboard before retrying an uncertain send.': 'Service de signature '
+                                                                                          'indisponible. Vérifiez '
+                                                                                          'son tableau de bord '
+                                                                                          'avant de réessayer un '
+                                                                                          'envoi incertain.',
+ 'Invoice not found.': 'Facture introuvable.',
+ 'Enter the signer first and last names (80 characters maximum).': 'Saisissez le prénom et le nom du signataire '
+                                                                   '(80 caractères maximum).',
+ 'A signature request already exists. Refresh its status instead of sending again.': 'Une demande de signature '
+                                                                                     'existe déjà. Actualisez son '
+                                                                                     'statut au lieu de refaire '
+                                                                                     'un envoi.',
+ 'This invoice is already confirmed.': 'Cette facture est déjà confirmée.',
+ 'The signature request changed. Reload the invoice.': 'La demande de signature a changé. Rechargez la facture.',
+ 'Unexpected signature service response. Check its dashboard before retrying.': 'Réponse inattendue du service de '
+                                                                                'signature. Vérifiez son tableau '
+                                                                                'de bord avant de réessayer.',
+ 'No remote request identifier. Check the signature service dashboard.': 'Aucun identifiant de demande externe. '
+                                                                         'Vérifiez le tableau de bord du service '
+                                                                         'de signature.',
+ 'Restore the original signature service environment to access this request.': 'Rétablissez l’environnement de '
+                                                                               'signature d’origine pour accéder '
+                                                                               'à cette demande.',
+ 'The expected signer has not been verified as signed.': 'La signature du signataire attendu n’a pas été '
+                                                         'vérifiée.',
+ 'The invoice changed after the signature request. Confirmation is blocked.': 'La facture a changé après la '
+                                                                              'demande de signature. La '
+                                                                              'confirmation est bloquée.',
+ 'The buyer declined the electronic signature request.': 'L’acheteur a refusé la demande de signature '
+                                                         'électronique.',
+ 'Signed evidence is unavailable.': 'Les documents de preuve signés sont indisponibles.',
+ 'creating': 'Préparation en cours',
+ 'draft': 'Brouillon',
+ 'needs_review': 'À vérifier',
+ 'ongoing': 'En attente de signature',
+ 'done': 'Signée',
+ 'declined': 'Refusée',
+ 'expired': 'Expirée',
+ 'canceled': 'Annulée',
+ 'deleted': 'Supprimée',
+ 'sandbox': 'Test',
+ 'production': 'Production'})
 
 
 class Translator:

@@ -15,6 +15,8 @@ from engine import new_invoice, score, eligible, confirm, finance, quote, loss_s
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
 from investor_ui import render_investor, render_portfolio_summary
+from signature_ui import render_signature
+from electronic_signature import validate_email
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -50,8 +52,8 @@ if route:
 def navigate(role, target_page, invoice=None):
     route = {'ui_demo_role': role, 'ui_navigation': target_page}
     if invoice:
-        if target_page == 'Buyer confirmation':
-            route.update(ui_represented_buyer_simulation=invoice['buyer'], confirm_pick=invoice['id'])
+        if target_page == 'Buyer signature':
+            route['signature_pick'] = invoice['id']
         elif target_page == 'Financing':
             route['finance_pick'] = invoice['id']
         elif target_page == 'Invoice checks':
@@ -90,7 +92,7 @@ def workflow(invoice):
     elif not invoice['identity'] or not invoice['documents']:
         role, target, label = 'SME', 'Invoice checks', 'Next: complete invoice checks'
     elif invoice['buyer_status'] != 'Confirmed':
-        role, target, label = 'Buyer', 'Buyer confirmation', 'Next: buyer confirmation'
+        role, target, label = 'SME', 'Buyer signature', 'Next: request buyer signature'
     else:
         role, target = 'Investor', 'Financing'
         label = 'Next: simulate financing' if eligible(invoice) else 'Review financing blockers'
@@ -141,7 +143,7 @@ def detail(i):
     c.metric(t('Due date'), date.fromisoformat(i['due']).strftime('%d/%m/%Y' if language == 'FR' else '%d %b %Y'))
     with st.expander(t('Checks and audit trail')):
         st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Incomplete'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Incomplete'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Demo risk assessment', 'Result': t('{p0}/100 · threshold 65', p0=score(i)[0])}]), t), hide_index=True, use_container_width=True)
-        st.caption(t('No official checks, OCR or contact with a real buyer. The upload checkboxes are demo declarations.'))
+        st.caption(t('Identity and document checks remain demo declarations. Electronic signatures are verified separately with the signature service.'))
         st.write(t('SHA-256 fingerprint of metadata'))
         st.code(i['record_hash'])
         if i['file_hash']:
@@ -151,6 +153,9 @@ def detail(i):
         st.write(t('Score breakdown'))
         st.dataframe(localize_frame(pd.DataFrame([{'Criterion': k, 'Points': v} for k, v in score(i)[1].items()]), t), hide_index=True)
         st.caption(t('Maximum 100: financial strength 40/25/5; payment history 25/15/0; confirmation 25; documents 10. This score is not a probability of default.'))
+    if i.get('signature'):
+        st.caption(t('Buyer signature environment: {environment} · status: {state}',
+                     environment=i['signature']['environment'], state=t(i['signature']['state'])))
     if i['note']:
         st.info(t(i['note']))
 
@@ -218,7 +223,7 @@ def future_value_panel(invoice):
 
 with st.sidebar:
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
-    profile = st.selectbox(t('Demo role'), ['SME', 'Buyer', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Buyer', 'Investor']), on_change=change_workspace)
+    profile = st.selectbox(t('Demo role'), ['SME', 'Investor'], key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', ['SME', 'Investor']), on_change=change_workspace)
     workspace = WORKSPACES[profile]
     pages = workspace['pages']
     page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
@@ -302,6 +307,7 @@ elif page == 'Upload an invoice':
             seller = a.text_input(t('SME name'), placeholder=t('E.g. Atelier Nova'), key='ui_sme_name', value=st.session_state.get('ui_sme_name', ''))
             siren = b.text_input(t('SIREN · 9-digit format'), max_chars=9, key='ui_siren_9_digit_format', value=st.session_state.get('ui_siren_9_digit_format', ''))
             buyer = a.text_input(t('Buyer'), placeholder=t('E.g. Groupe Horizon'), key='ui_buyer', value=st.session_state.get('ui_buyer', ''))
+            buyer_email = a.text_input(t('Buyer email address (optional)'), key='ui_buyer_email')
             reference = b.text_input(t('Invoice reference'), key='ui_invoice_reference', value=st.session_state.get('ui_invoice_reference', ''))
             amount = a.number_input(t('Invoice amount (€)'), min_value=1.0, value=st.session_state.get('ui_invoice_amount', 10000.0), step=100.0, key='ui_invoice_amount')
             issued = b.date_input(t('Issue date'), value=st.session_state.get('ui_issue_date', date.today()), max_value=date.today(), key='ui_issue_date')
@@ -316,10 +322,12 @@ elif page == 'Upload an invoice':
             try:
                 if amount is None or issued is None or due is None:
                     raise ValueError('Enter the invoice amount, issue date and due date before submitting.')
+                email = validate_email(buyer_email) if buyer_email.strip() else ''
                 item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=documents, identity=identity, strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
+                item['buyer_email'] = email
                 database.add(item)
                 st.session_state.focus_invoice = item['id']
-                st.session_state.notice = t('Invoice {p0} submitted. Switch to the Buyer role to confirm it.', p0=item['reference'])
+                st.session_state.notice = t('Invoice {p0} submitted. Request the buyer signature from the SME workspace.', p0=item['reference'])
                 st.rerun()
             except ValueError as exc:
                 st.error(t(str(exc)))
@@ -347,33 +355,15 @@ elif page == 'Invoice checks':
                     st.rerun()
                 except ValueError as exc:
                     st.error(t(str(exc)))
-elif page == 'Buyer confirmation':
-    st.subheader(t('Confirm your supplier invoices'))
-    if profile != 'Buyer':
-        st.info(t('Select the Buyer role to confirm or dispute an invoice.'))
+elif page == 'Buyer signature':
+    items = [i for i in invoices if i.get('signature') or (not i.get('financing') and i['status'] != 'Closed')]
+    if not items:
+        st.info(t('No invoices available.'))
     else:
-        buyer = st.selectbox(t('Represented buyer (simulation)'), sorted({i['buyer'] for i in invoices}), key='ui_represented_buyer_simulation', index=selected_index('ui_represented_buyer_simulation', sorted({i['buyer'] for i in invoices})))
-        items = [i for i in invoices if i['buyer'] == buyer and i['status'] not in ('Financed', 'Closed')]
-        if not items:
-            st.info(t('No invoices to process for this buyer.'))
-        else:
-            selected = pick(items, 'confirm_pick')
-            i = next((i for i in items if i['id'] == selected))
-            detail(i)
-            with st.form('confirm'):
-                decision = st.radio(t('Decision'), ['Confirm', 'Dispute'], horizontal=True, key='ui_decision', format_func=t, index=selected_index('ui_decision', ['Confirm', 'Dispute']))
-                attestation = st.checkbox(t('I simulate confirmation of the service, amount and due date, and that the invoice is unpaid and undisputed.'), key='ui_i_simulate_confirmation_of_the_service_amount_and_due_date_and_that_the_invoice_is_unpaid_and_undisputed', value=st.session_state.get('ui_i_simulate_confirmation_of_the_service_amount_and_due_date_and_that_the_invoice_is_unpaid_and_undisputed', False))
-                note = st.text_area(t('Comment · required for a dispute'), key='ui_comment_required_for_a_dispute', value=st.session_state.get('ui_comment_required_for_a_dispute', ''))
-                submit = st.form_submit_button(t('Save decision'), type='primary')
-            if submit:
-                try:
-                    if decision == 'Confirm' and (not attestation):
-                        raise ValueError('Check the confirmation box to approve the invoice.')
-                    persist_update(i, confirm, decision == 'Confirm', note)
-                    st.session_state.notice = t('Decision saved.')
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(t(str(exc)))
+        selected = pick(items, 'signature_pick')
+        i = next(i for i in items if i['id'] == selected)
+        detail(i)
+        render_signature(i, database, t)
 elif page == 'Financing':
     st.subheader(t('Finance confirmed invoices'))
     focused = next((i for i in invoices if i['id'] == st.session_state.get('focus_invoice')), None)
@@ -506,5 +496,5 @@ elif page == 'Portfolio':
                         except ValueError as exc:
                             st.error(t(str(exc)))
 st.divider()
-st.caption(t('InvoiceFlow · Academic demo based on your concept. Confirmation, scoring, insurance and financing are simulated; no banking service, external register or blockchain is connected.'))
+st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Electronic signature requires a configured provider; sandbox signatures have no legal effect.'))
 

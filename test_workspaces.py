@@ -18,9 +18,10 @@ class WorkspaceTests(unittest.TestCase):
             if role == 'Investor':
                 self.assertTrue(all(eligible(i) for i in items))
                 self.assertEqual(metrics[1][1], sum(i['amount'] for i in items))
-        self.assertEqual(len(set(snapshots)), 3)
+        self.assertEqual(len(set(snapshots)), 2)
         self.assertNotIn('Financing', WORKSPACES['SME']['pages'])
-        self.assertNotIn('Upload an invoice', WORKSPACES['Buyer']['pages'])
+        self.assertNotIn('Buyer', WORKSPACES)
+        self.assertIn('Buyer signature', WORKSPACES['SME']['pages'])
         self.assertNotIn('Buyer confirmation', WORKSPACES['Investor']['pages'])
 
     def test_metrics_follow_financing_and_payment(self):
