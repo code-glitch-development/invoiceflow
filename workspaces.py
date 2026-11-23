@@ -14,7 +14,7 @@ WORKSPACES = {
         'steps': ['Upload an invoice', 'Invoice review status', 'Invoice and transaction tracking'],
     },
     'Investor': {
-        'pages': ['Overview', 'Compare opportunities', 'Portfolio', 'Simulation assumptions', 'Buyer accounts', 'Financing', 'Simulator'],
+        'pages': ['Overview', 'Compare opportunities', 'Example invoices', 'Portfolio', 'Simulation assumptions', 'Buyer accounts', 'Financing', 'Simulator'],
         'title': 'Investor workspace',
         'headline': 'Explore eligible invoices.',
         'description': 'Review eligibility, simulate an advance and track your portfolio.',

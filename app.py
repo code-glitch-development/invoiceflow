@@ -22,7 +22,8 @@ from financial_risk_ui import render_accounts, risk_summary
 from investor_ui import render_investor, render_portfolio_summary
 from signature_ui import render_confirmation, render_recipient
 from buyer_confirmation import validate_email
-from buyer_workspace import buyer_invoices, render_buyer_confirmation
+from buyer_workspace import BUYER_PROFILES, buyer_invoices, render_buyer_confirmation
+from sme_profiles import ALL_SMES, company_profiles, sme_invoices, apply_sme_profile, validate_sme_submission
 st.set_page_config(page_title='InvoiceFlow · EN / FR', page_icon='↗', layout='wide')
 with st.sidebar:
     logo_path = Path(__file__).parent / 'assets' / 'invoiceflow-logo.png'
@@ -68,6 +69,8 @@ def navigate(role, target_page, invoice=None):
     if invoice:
         if role == 'Buyer':
             route['ui_buyer_company'] = invoice['buyer']
+        elif role == 'SME':
+            route['ui_sme_company'] = invoice['seller']
         if target_page == 'Buyer confirmation':
             route['signature_pick'] = invoice['id']
         elif target_page == 'Financing':
@@ -109,8 +112,6 @@ def workflow(invoice):
         role, target, label = 'Investor', 'Portfolio', 'Next: track payment'
     elif invoice['buyer_status'] != 'Confirmed':
         role, target, label = ('Buyer', 'Buyer confirmation', 'Review buyer invoices') if profile == 'Buyer' else ('SME', 'Buyer confirmation', 'Next: request buyer confirmation')
-    elif not invoice['identity'] or not invoice['documents']:
-        role, target, label = 'SME', 'Invoice checks', 'View pending checks'
     else:
         role, target = 'Investor', 'Financing'
         label = 'Next: simulate financing' if eligible(invoice) else 'Review financing blockers'
@@ -244,8 +245,21 @@ with st.sidebar:
     st.caption(t('VERIFIED INVOICES. FASTER PAYMENTS.'))
     profile = st.selectbox(t('Demo role'), list(WORKSPACES), key='ui_demo_role', format_func=t, index=selected_index('ui_demo_role', list(WORKSPACES)), on_change=change_workspace)
     buyer_company = ''
+    sme_company = ALL_SMES
+    sme_profiles = company_profiles(invoices)
+    if profile == 'SME':
+        options = [ALL_SMES] + sorted(sme_profiles)
+        if 'ui_sme_company' not in st.session_state:
+            previous = st.session_state.get('sme_selected_company', ALL_SMES)
+            st.session_state.ui_sme_company = previous if previous in options else ALL_SMES
+        sme_company = st.selectbox(t('SME company (demo)'), options, key='ui_sme_company', format_func=lambda v: t(v) if v == ALL_SMES else v, index=selected_index('ui_sme_company', options))
+        st.session_state.sme_selected_company = sme_company
+        apply_sme_profile(st.session_state, sme_company, sme_profiles)
+        st.caption(t('Company selection filters this demo view; it is not a secure login.'))
+        st.caption(t('Demo profiles do not create invoices. Their prefilled SIREN values are fictional test identifiers.'))
+        st.caption(t('Changing SME profile clears the unsaved upload draft.'))
     if profile == 'Buyer':
-        companies = sorted({i['buyer'] for i in invoices})
+        companies = sorted(set(BUYER_PROFILES) | {i['buyer'] for i in invoices})
         if companies:
             buyer_company = st.selectbox(t('Buyer company (demo)'), companies, key='ui_buyer_company', index=selected_index('ui_buyer_company', companies))
         st.caption(t('Company selection filters this demo view; it is not a secure login.'))
@@ -253,7 +267,7 @@ with st.sidebar:
     pages = workspace['pages']
     page = st.radio(t('Navigation'), pages, key='ui_navigation', format_func=lambda value: t('Opportunities') if profile == 'Investor' and value == 'Overview' else t(value), index=selected_index('ui_navigation', pages))
     st.divider()
-    st.caption(t('Educational prototype · NEOMA\n\nAll parties and transactions are fictional. No money is transferred.'))
+    st.caption(t('Financing simulation'))
     if profile != 'Buyer':
         with st.expander(t('Workspace data')):
             reset = st.checkbox(t('Delete all saved invoices for all visitors'), key='ui_clear_the_data_in_this_session', value=st.session_state.get('ui_clear_the_data_in_this_session', False))
@@ -265,17 +279,20 @@ with st.sidebar:
                     st.rerun()
                 except StorageError as exc:
                     st.error(t(str(exc)))
-if profile == 'Buyer':
+all_invoices = invoices
+if profile == 'SME':
+    invoices = sme_invoices(invoices, sme_company)
+elif profile == 'Buyer':
     invoices = buyer_invoices(invoices, buyer_company)
-if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions']):
+if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Example invoices']):
     st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
             '</div><h1>' + t(workspace['headline']) + '</h1><p>' +
             t(workspace['description']) + '</p></div>', unsafe_allow_html=True)
-st.caption(t('{profile} workspace · Roles are interchangeable for the demo. Saved invoices are shared across visitors on this server; there is no authentication.', profile=t(profile)))
+st.caption(t('Workspace: {profile}', profile=t(profile)))
 st.caption(t('Changes are saved automatically. Closing your browser does not delete saved invoices.'))
 if 'notice' in st.session_state:
     st.success(st.session_state.pop('notice'))
-if profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions']:
+if profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Example invoices']:
     render_investor(page, invoices, database, t, euro, navigate)
 elif page == 'Overview':
     metrics, actionable = overview(profile, invoices)
@@ -335,23 +352,24 @@ elif page == 'Upload an invoice':
         # Business data is still saved only by the explicit submit button below.
         with st.container():
             a, b = st.columns(2)
-            seller = a.text_input(t('SME name'), placeholder=t('E.g. Atelier Nova'), key='ui_sme_name', value=st.session_state.get('ui_sme_name', ''))
-            siren = b.text_input(t('SIREN · 9-digit format'), max_chars=9, key='ui_siren_9_digit_format', value=st.session_state.get('ui_siren_9_digit_format', ''))
+            seller = a.text_input(t('SME name'), placeholder=t('E.g. Atelier Nova'), key='ui_sme_name', value=st.session_state.get('ui_sme_name', sme_company if sme_company != ALL_SMES else ''))
+            siren = b.text_input(t('SIREN · 9-digit format'), max_chars=9, key='ui_siren_9_digit_format', value=st.session_state.get('ui_siren_9_digit_format', sme_profiles.get(sme_company, '')))
             buyer = a.text_input(t('Buyer'), placeholder=t('E.g. Groupe Horizon'), key='ui_buyer', value=st.session_state.get('ui_buyer', ''))
             buyer_email = a.text_input(t('Buyer email address (optional)'), key='ui_buyer_email')
             reference = b.text_input(t('Invoice reference'), key='ui_invoice_reference', value=st.session_state.get('ui_invoice_reference', ''))
             amount = a.number_input(t('Invoice amount (€)'), min_value=1.0, value=st.session_state.get('ui_invoice_amount', 10000.0), step=100.0, key='ui_invoice_amount')
             issued = b.date_input(t('Issue date'), value=st.session_state.get('ui_issue_date', date.today()), max_value=date.today(), key='ui_issue_date')
             due = a.date_input(t('Due date'), value=st.session_state.get('ui_due_date', date.today() + timedelta(days=60)), min_value=date.today() + timedelta(days=1), key='ui_due_date')
-            st.caption(t('The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.'))
-            st.caption(t('SME identity and supporting documents await review by InvoiceFlow or its financing partner. Submitting an invoice does not verify them.'))
+            st.caption(t('The detected details remain editable. Review the extracted information before submitting.'))
+            st.caption(t('Identity and supporting documents are not independently verified. These checks do not block a financing simulation.'))
             submitted = st.button(t('Submit invoice'), type='primary', key='ui_submit_invoice')
         if submitted:
             try:
                 if amount is None or issued is None or due is None:
                     raise ValueError('Enter the invoice amount, issue date and due date before submitting.')
+                validate_sme_submission(sme_company, seller)
                 email = validate_email(buyer_email) if buyer_email.strip() else ''
-                item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=False, identity=False, strength='Average', history='Occasional delays', file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
+                item = new_invoice(all_invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=False, identity=False, strength='Average', history='Occasional delays', file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
                 item['buyer_email'] = email
                 database.add(item)
                 st.session_state.focus_invoice = item['id']
@@ -362,7 +380,7 @@ elif page == 'Upload an invoice':
 elif page == 'Invoice checks':
     st.subheader(t('Invoice review status'))
     st.caption(t('Checks are read-only in the SME workspace.'))
-    st.info(t('SME identity and supporting documents must be reviewed by InvoiceFlow or its financing partner. This prototype has no independent verification service or reviewer workspace yet.'))
+    st.info(t('Identity and supporting documents are not independently verified. These checks do not block a financing simulation.'))
     items = [i for i in invoices if not i.get('financing') and i['status'] != 'Closed']
     if not items:
         st.info(t('No invoices available.'))
@@ -408,7 +426,7 @@ elif page == 'Financing':
             selected = pick(items, 'finance_pick')
             i = next((i for i in items if i['id'] == selected))
             detail(i)
-            st.caption(t('Financing requires buyer confirmation, identity/document review and a future due date. Accounting risk is a separate financial indicator, not an approval or an interest rate.'))
+            st.caption(t('Simulation requires buyer confirmation and a future due date. Identity and document-review status remain visible but do not block this simulation.'))
             with st.expander(t('Financing options'), expanded=False):
                 method = st.radio(t('Pricing method'), ['Z-linked tariff (demo)', 'Risk-based pricing', 'Manual assumptions'],
                                   format_func=t, key='ui_pricing_method')
@@ -553,5 +571,5 @@ elif page == 'Portfolio':
                         except ValueError as exc:
                             st.error(t(str(exc)))
 st.divider()
-st.caption(t('InvoiceFlow · Academic demo based on your concept. Scoring, insurance and financing are simulated. Buyer confirmation uses a personal link without independent identity verification. Automatic email requires a configured mail service.'))
+st.caption(t('InvoiceFlow · Financing simulation. Buyer confirmation does not independently verify identity.'))
 

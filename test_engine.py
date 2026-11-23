@@ -29,10 +29,10 @@ class WorkflowTests(unittest.TestCase):
         invoice = new_invoice([], **args)
         messages = financing_blockers(invoice)
         self.assertIn('Buyer confirmation is missing.', messages)
-        self.assertIn('SME identity verification is incomplete.', messages)
-        self.assertTrue(any('Supporting documents' in m for m in messages))
+        self.assertFalse(any('identity' in m or 'Supporting documents' in m for m in messages))
         confirm(invoice, True)
-        complete_checks(invoice, True, True)
+        self.assertFalse(invoice['identity'])
+        self.assertFalse(invoice['documents'])
         self.assertEqual(financing_blockers(invoice), [])
         self.assertTrue(eligible(invoice))
         self.assertEqual([done for _, done in journey(invoice)], [True, True, True, False, False])
@@ -84,7 +84,7 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             new_invoice([i], **args, file_bytes=b'example')
 
-    def test_block_missing_checks_without_arbitrary_financial_points(self):
+    def test_pending_verification_is_nonblocking_but_expiry_still_blocks(self):
         for field, value in [('identity', False), ('documents', False)]:
             args = self.args()
             args[field] = value
@@ -92,7 +92,8 @@ class WorkflowTests(unittest.TestCase):
                 args['history'] = 'Frequent delays'
             i = new_invoice([], **args)
             confirm(i, True)
-            self.assertFalse(eligible(i))
+            self.assertTrue(eligible(i))
+            self.assertFalse(i[field])
         i = new_invoice([], **self.args())
         confirm(i, True)
         i['due'] = date.today().isoformat()

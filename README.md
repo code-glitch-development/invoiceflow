@@ -52,7 +52,7 @@ Each overview has its own headline, primary action and invoice queue. Guided nex
 
 The **Invoice progress** view shows Submitted → Confirmed → Eligible → Financed → Paid. Its next-step button opens the right role, page and invoice automatically. Select any invoice in Overview or Portfolio to resume its journey.
 
-The **Invoice checks** page is read-only for the SME and shows identity/document review status. The supplier self-verification checkboxes and save-checks action have been removed from upload and review pages. New invoice identity/document flags start false, even after OCR or buyer confirmation. Existing historical demo declarations are preserved and explicitly labelled as declarations, not independent verification. The prototype currently has no independent review integration or reviewer workspace: new invoices remain blocked from financing until a separate reviewer process is implemented. Buyer confirmation can still be requested before that review is complete. Financing screens show each blocking reason and a complete checklist, using the same rules as the financing engine. Disputes, missing operational checks and expired due dates remain financing blockers. The former arbitrary score threshold has been removed.
+The **Invoice checks** page is read-only and keeps identity/document status visible. New invoices retain false identity/document flags after upload, buyer confirmation and financing: no independent verification is claimed. At the user's request, these two checks are now nonblocking for a financing simulation. Buyer confirmation, approved invoice status, a future due date and absence of prior financing still apply, alongside the selected pricing model's policy (including distress/manual-review restrictions). The former arbitrary score threshold and supplier self-verification checkboxes remain removed.
 
 The sidebar can clear the shared workspace only after an explicit deletion checkbox is selected. It never reloads sample invoices.
 
@@ -552,3 +552,57 @@ overwritten, and a workspace decision also prevents a pending email link from
 changing the response. Email confirmation remains available without a buyer
 workspace visit. Existing SME/investor access to accounting dossiers is retained.
 No database migration, new service or additional secret is required.
+
+
+## Named SME demo profiles
+
+The SME sidebar now includes ten named fictional suppliers, including Atelier
+Nova Conseil SAS and Orbe Digital SAS from the generated PDF examples. Existing
+invoice suppliers are automatically included. Profiles are static navigation
+presets, not user accounts: no invoices or financial data are seeded and no
+identity, credit assessment or operational approval is inferred.
+
+Selecting a company filters the overview, invoice checks, confirmation requests,
+accounting dossiers, portfolio and exports to that supplier name. The explicit
+all-companies demo view remains available for an overall review or entering a
+new supplier. Invoice duplicate checks still use the full saved workspace.
+
+A named profile prefills the supplier name and fictional 9-digit SIREN in a new
+upload. Changing companies clears the unsaved upload draft and its uploaded file
+to avoid carrying another company's invoice. OCR can still propose editable
+fields, but submitting a different supplier while a named profile is selected
+is rejected until the user selects the matching profile or all-companies view.
+The last selected SME company survives role changes within the browser session;
+guided navigation selects the supplier of its referenced invoice. No migration,
+new service or authentication has been introduced.
+
+
+## Isolated investor examples and simplified simulation flow
+
+The NEOMA/educational banner and blanket fictional-transactions footer have been
+removed from the UI. The app retains a concise financing-simulation label and
+keeps actual identity/document limitations visible. After buyer confirmation,
+identity/document-review flags no longer stop the next simulation step; they
+remain false and are not presented as independently verified. Disputes, expired
+due dates, already financed/closed records and pricing-policy blockers still
+prevent financing.
+
+Five named buyer profiles are available even before any invoices are uploaded.
+Ten named SME profiles and existing imported suppliers are also selectable.
+Profiles create no invoices. Imported records and their saved financing amounts
+are preserved; no new cleanup deletes user documents or manually entered records.
+
+The investor overview and **Example invoices** page show five separately labelled
+cases with Z-double-prime values 3.8576, 1.852, 1.2525, 0.788666666667 and no
+accounts, corresponding to tariffs 5%, 7%, 7%, 9% indicative/manual review and
+10%. All cases use the same tariff and commission code as uploaded invoices.
+Each assessed example has a downloadable illustrative source PDF whose seven
+amounts match its inputs. The source accounts are not actual company filings.
+
+Examples live only in a separate browser-session collection, never in SQLite
+invoice records, company queues, uploaded-invoice selections, exports or saved
+portfolio totals. Example simulations can be exercised independently; the
+high-distress example remains blocked by the manual-review policy. Refreshing
+the date regenerates fresh example maturities; resetting the browser session
+resets example simulation state. Uploaded-invoice filters do not apply to the
+separate example catalogue.

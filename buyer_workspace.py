@@ -4,6 +4,9 @@ import json
 from engine import canonical, confirm
 from buyer_confirmation import ConfirmationError
 
+BUYER_PROFILES = ('Lumen Services SAS', 'Sillage Operations SAS', 'Meridien Services SAS',
+                  'Cobalt Solutions SAS', 'Solstice Distribution SAS')
+
 
 def buyer_invoices(invoices, company):
     return [i for i in invoices if canonical(i['buyer']) == canonical(company)] if company else []

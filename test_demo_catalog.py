@@ -24,7 +24,7 @@ class DemoCatalogTests(unittest.TestCase):
         self.assertEqual(len(records), 30)
         self.assertEqual(len({i['key'] for i in records}), 30)
         self.assertEqual(len({i['id'] for i in records}), 30)
-        self.assertEqual(sum(eligible(i) for i in records), 19)
+        self.assertEqual(sum(eligible(i) for i in records), 21)
         self.assertGreaterEqual(len(filtered(opportunities([with_accounts(i) for i in records]), 25000, 90)), 12)
         self.assertGreaterEqual(len({i['buyer'] for i in records}), 6)
         self.assertGreaterEqual(len({i['amount'] for i in records}), 20)

@@ -96,7 +96,7 @@ class OpportunityTests(unittest.TestCase):
     def test_invalid_second_invoice_rolls_back_first_update(self):
         # Construct an invalid persisted status that report fields alone do not cover.
         changed = self.store.load()[-1]
-        changed['identity'] = False
+        changed['buyer_status'] = 'Disputed'
         self.store.update(changed)
         records = self.store.load()
         review = self.review()

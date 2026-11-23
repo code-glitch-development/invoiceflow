@@ -206,6 +206,10 @@ def render_portfolio_summary(invoices, t, euro, detailed=True):
 
 
 def render_investor(page, invoices, database, t, euro, navigate):
+    if page == 'Example invoices':
+        from investor_examples import render_investor_examples
+        render_investor_examples(t, euro)
+        return
     if page == 'Simulation assumptions':
         assumptions_page(invoices, t)
         return
@@ -224,7 +228,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
     st.markdown('<div class="risk-legend" aria-label="' + escape(t('Pricing scenario')) + '">' +
                 ''.join(risk_badge(scenario, t) for scenario in SCENARIOS) + '</div>', unsafe_allow_html=True)
-    st.caption(t('Colours describe the selected fictional scenario, not a verified credit rating.'))
+    st.caption(t('Colours indicate the pricing category, not a verified credit rating.'))
     if page == 'Overview':
         st.button(t('View portfolio details'), key='investor_portfolio_details',
                   on_click=navigate, args=('Investor', 'Portfolio'))
@@ -313,6 +317,10 @@ def render_investor(page, invoices, database, t, euro, navigate):
                     st.write(entry['invoice']['reference'])
                     for reason in entry['report']['blockers']:
                         st.caption(t(reason))
+    if page == 'Overview':
+        from investor_examples import render_investor_examples
+        with st.container(border=True):
+            render_investor_examples(t, euro)
     hidden = sum(identifier not in {e['invoice']['id'] for e in visible} for identifier in selected)
     if hidden:
         st.info(t('{count} selected invoices are hidden by your filters.', count=hidden))

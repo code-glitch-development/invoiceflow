@@ -113,7 +113,7 @@ class RiskPricingTests(unittest.TestCase):
         self.assertFalse(result['acceptable'])
 
     def test_workflow_gates_remain_enforced(self):
-        for key, value in [('identity', False), ('documents', False), ('buyer_status', 'Disputed')]:
+        for key, value in [('buyer_status', 'Disputed'), ('buyer_status', 'Pending'), ('status', 'Closed')]:
             invoice = dict(self.invoice, **{key:value})
             before = deepcopy(invoice)
             with self.assertRaises(ValueError):

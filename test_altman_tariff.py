@@ -65,7 +65,7 @@ class TariffTests(unittest.TestCase):
         self.assertEqual(investor_valuation(self.invoice,valuation_today()+timedelta(days=60))['future_value'],10000)
 
     def test_operational_checks_still_apply_when_accounts_missing(self):
-        self.invoice.pop('buyer_accounts');self.invoice['identity']=False
+        self.invoice.pop('buyer_accounts');self.invoice['buyer_status']='Disputed'
         with self.assertRaises(ValueError):finance_with_altman_tariff(self.invoice)
 
     def test_distress_tariff_is_indicative_and_cannot_be_funded_automatically(self):

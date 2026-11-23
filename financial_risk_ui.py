@@ -49,7 +49,7 @@ def render_accounts(invoice, store, t):
     st.header(t('Buyer annual accounts'))
     st.write(t('Assess the company that owes the invoice: {buyer}',buyer=invoice['buyer']))
     st.caption(t('The PDF is read locally, with OCR for scanned pages. Prefilled figures are proposals to review, not authenticated financial data.'))
-    st.caption(t('Use public or anonymised statements: this academic workspace is shared.'))
+    st.caption(t('Documents are shared across app visitors. Upload only documents you are allowed to share.'))
     previous=invoice.get('buyer_accounts',{})
     archived=statement_document(store,invoice)
     if archived:
