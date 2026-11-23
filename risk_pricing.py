@@ -130,6 +130,8 @@ def price_invoice(invoice, raw_assumptions, as_of=None):
         'discount_percent': discount, 'annual_rate_percent': annual,
         'acceptable': not blockers, 'blockers': blockers, **cashflows,
     }
+    from commission import add_commission
+    add_commission(report)
     canonical = json.dumps(report, sort_keys=True, separators=(',', ':'), allow_nan=False)
     report['snapshot_hash'] = hashlib.sha256(canonical.encode()).hexdigest()
     return report

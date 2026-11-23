@@ -2,6 +2,7 @@
 import streamlit as st
 from altman_tariff import POLICY,tariff_quote
 from portfolio import holding_yield_percent
+from commission_ui import render_commission_breakdown
 
 
 def tariff_controls(invoice,t,euro):
@@ -19,12 +20,13 @@ def tariff_controls(invoice,t,euro):
     if report['accounting_z'] is None:
         st.warning(t('The buyer risk is not assessed. The 10% rate is an information-uncertainty surcharge, not proof that the risk is covered.'))
     a,b,c=st.columns(3)
-    a.metric(t('Simulated advance to the SME'),euro(report['advance']))
+    a.metric(t('Capital to advance'),euro(report['advance']))
     b.metric(t('Potential gross gain'),euro(report['gross_discount']))
     c.metric(t('Payment horizon'),t('{days} days',days=report['horizon_days']))
     st.write(t('Gross return over the operation')+f" · **{holding_yield_percent(invoice['amount'],report['advance']):.2f} %**")
     st.latex(r'PV=FV\,e^{-r\,d/365}')
     st.caption(t('The invoice face value is FV. The tariff is annual and continuous; the actual days to maturity determine the advance. Rounding is to cents. Returns assume full payment and exclude costs and losses.'))
+    render_commission_breakdown(invoice['amount'],report,t,euro)
     for reason in report['blockers']:st.error(t(reason))
     with st.expander(t('Tariff calculation details')):st.json(report)
     return report

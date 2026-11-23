@@ -6,6 +6,8 @@ from copy import deepcopy
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+from commission import commission_breakdown
+from commission_ui import render_commission_breakdown
 from storage import InvoiceStore, StorageError
 from startup_cleanup import remove_auto_supplier_batch
 from i18n import Translator, localize_frame
@@ -412,13 +414,19 @@ elif page == 'Financing':
                                                   key='ui_financing_interest')
                 q = quote(i['amount'], rate)
                 a, b = st.columns(2)
-                a.metric(t('Simulated advance to the SME'), euro(q['advance']))
+                a.metric(t('Capital to advance'), euro(q['advance']))
                 b.metric(t('Gross margin if paid in full'), euro(q['fee']))
                 days_to_due = max(0, (date.fromisoformat(i['due']) - valuation_today()).days)
                 st.metric(t('Future value at due date (simulation)'),
                           euro(round_value(continuous_future_value(q['advance'], days_to_due / 365, annual_interest))))
                 st.caption(t('Continuous interest uses the capital advanced and a separate annual percentage rate. The fee remains a one-off percentage of the invoice.'))
-                ready = True
+                try:
+                    q.update(commission_breakdown(i['amount'], q['advance']))
+                    render_commission_breakdown(i['amount'], q, t, euro)
+                    ready = True
+                except ValueError as exc:
+                    st.error(t(str(exc)))
+                    ready = False
             st.caption(t('Before capital costs, insurance, losses and operating expenses. Coverage is hypothetical; no insurer is connected.'))
             if not eligible(i):
                 st.warning(t('Resolve the requirements listed above before financing.'))
@@ -443,7 +451,7 @@ elif page == 'Simulator':
     recourse = b.toggle(t('With recourse'), value=st.session_state.get('ui_with_recourse', False), key='ui_with_recourse')
     result = loss_scenario(amount, rate, coverage, recourse)
     x, y, z = st.columns(3)
-    x.metric(t('Immediate advance'), euro(result['advance']))
+    x.metric(t('Capital to advance'), euro(result['advance']))
     y.metric(t('Gross fee'), euro(result['fee']))
     z.metric(t('Capital at risk after insurance'), euro(result['residual']))
     st.dataframe(localize_frame(pd.DataFrame([{'Scenario': 'Full payment', 'Model outcome': t('{p0} received; gross margin {p1}.', p0=euro(amount), p1=euro(result['fee']))}, {'Scenario': 'Late payment', 'Model outcome': 'No final loss calculated; financing period extended.'}, {'Scenario': 'Covered insolvency', 'Model outcome': t('Hypothetical indemnity {p0} ; residual capital {p1}.', p0=euro(result['indemnity']), p1=euro(result['residual']))}, {'Scenario': 'Dispute / fraud', 'Model outcome': 'No coverage assumed; exposure may reach the full advance.'}]), t), hide_index=True, use_container_width=True)
@@ -464,11 +472,16 @@ elif page == 'Simulator':
     st.latex(r'FV = P \times \exp\left(t \times \frac{r}{100}\right)')
     st.caption(t('Capital is the simulated advance. Enter the annual rate as a percentage: 5 means 5%, not 0.05%.'))
     st.caption(t('Separate theoretical scenario: not added to the invoice, fee, insurance indemnity or collected income. Repayment is not guaranteed.'))
+    try:
+        result.update(commission_breakdown(amount, result['advance']))
+        render_commission_breakdown(amount, result, t, euro)
+    except ValueError as exc:
+        st.error(t(str(exc)))
     st.subheader(t('Revenue simulation'))
     count = st.number_input(t('Invoices financed per month'), min_value=1, value=st.session_state.get('ui_invoices_financed_per_month', 100), step=1, key='ui_invoices_financed_per_month')
     a, b = st.columns(2)
-    a.metric(t('Hypothetical monthly fee revenue'), euro(count * result['fee']))
-    b.metric(t('Hypothetical annual fee revenue'), euro(count * result['fee'] * 12))
+    a.metric(t('Hypothetical monthly fee revenue'), euro(count * result.get('platform_commission', 0)))
+    b.metric(t('Hypothetical annual fee revenue'), euro(count * result.get('platform_commission', 0) * 12))
     st.caption(t('At constant volume, before all expenses. This simulation is not a business forecast.'))
 elif page == 'Portfolio':
     if profile == 'Investor':
@@ -490,6 +503,7 @@ elif page == 'Portfolio':
         detail(i)
         f = i['financing']
         if f:
+            render_commission_breakdown(i['amount'], f, t, euro)
             st.write(t('Advance: **{p0}** · Fee: **{p1} %** · Hypothetical coverage: **{p2} %** · {p3}', p0=euro(f['advance']), p1=f"{f['rate']:.4f}", p2=f['coverage'], p3=t('With recourse' if f['recourse'] else 'Without recourse')))
             if profile == 'Investor':
                 future_value_panel(i)

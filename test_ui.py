@@ -401,6 +401,30 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(saved['financing']['pricing']['policy_annual_rate_percent'],10)
         self.assertIsNone(saved['financing']['pricing']['accounting_z'])
 
+    def test_commission_breakdown_is_bilingual_and_saved_in_portfolio(self):
+        from i18n import Translator
+        at = self.app()
+        at.sidebar.selectbox(key='ui_demo_role').set_value('Investor').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Financing').run()
+        at.radio(key='ui_pricing_method').set_value('Z-linked tariff (demo)').run()
+        identifier = at.selectbox(key='finance_pick').value
+        for language in ('FR', 'EN'):
+            at.sidebar.radio(key='language').set_value(language).run()
+            self.assertFalse(at.exception)
+            label = Translator(language).text('InvoiceFlow commission (1% once)')
+            self.assertTrue(any(table.value.astype(str).eq(label).to_numpy().any() for table in at.table))
+        at.button(key='ui_simulate_financing').click().run()
+        self.assertFalse(at.exception)
+        invoice = next(i for i in at.session_state['invoices'] if i['id'] == identifier)
+        funding = invoice['financing']
+        self.assertAlmostEqual(funding['platform_commission'], round(invoice['amount'] * .01, 2))
+        self.assertAlmostEqual(funding['advance'], funding['sme_net_proceeds'] + funding['platform_commission'])
+        at.sidebar.selectbox(key='ui_demo_role').set_value('SME').run()
+        at.sidebar.radio(key='ui_navigation').set_value('Portfolio').run()
+        at.selectbox(key='portfolio_pick').set_value(identifier).run()
+        self.assertFalse(at.exception)
+        self.assertTrue(any(table.value.astype(str).eq('Net payment to the SME').to_numpy().any() for table in at.table))
+
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO
         upload = BytesIO(b'invalid')

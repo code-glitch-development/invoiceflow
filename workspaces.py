@@ -36,7 +36,7 @@ def overview(role, invoices):
     if role == 'SME':
         metrics = [('Submitted volume', sum(i['amount'] for i in invoices), True),
                    ('Invoice files awaiting review', len(incomplete), False),
-                   ('Simulated advances', sum(i['financing']['advance'] for i in financed), True)]
+                   ('Simulated advances', sum(i['financing'].get('sme_net_proceeds', i['financing']['advance']) for i in financed), True)]
         items = invoices
     else:
         metrics = [('Eligible for financing simulation', len(available), False),

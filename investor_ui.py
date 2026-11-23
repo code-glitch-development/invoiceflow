@@ -7,6 +7,7 @@ import streamlit as st
 from engine import buyer_outstanding_capital, canonical, money
 from portfolio import holding_yield_percent, portfolio_summary
 from financial_risk import assess_buyer
+from commission_ui import render_commission_breakdown
 from pricing_ui import illustrative_pricing_consent
 from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities, tariff_opportunities,
                            filtered, review_selection, review_fingerprint)
@@ -115,7 +116,8 @@ def comparison(chosen, portfolio, budget, t, euro):
     criteria = ['Buyer', 'Pricing scenario', 'Capital to advance', 'Payment horizon', 'Gross annual yield (continuous, %)',
                 'Gross return over the operation (%)',
                 'One-year buyer probability of default (%)', 'Nominal LGD before time discount (%)',
-                'Full-payment proceeds', 'Potential gross gain', 'Existing buyer exposure']
+                'Full-payment proceeds', 'Potential gross gain', 'Existing buyer exposure',
+                'InvoiceFlow commission (1% once)', 'Net payment to the SME']
     data = {t('Criterion'): [t(label) for label in criteria]}
     for entry in chosen:
         i, r = entry['invoice'], entry['report']
@@ -124,7 +126,8 @@ def comparison(chosen, portfolio, budget, t, euro):
             f"{holding_yield_percent(i['amount'], r['advance']):.2f}",
             f"{r['assumptions']['annual_pd_percent']:.2f}" if 'annual_pd_percent' in r['assumptions'] else '—', f"{r['assumptions']['lgd_percent']:.1f}" if 'lgd_percent' in r['assumptions'] else '—',
             euro(i['amount']), euro(r['gross_discount']),
-            euro(buyer_outstanding_capital(portfolio, i['buyer'])['outstanding_capital'])]
+            euro(buyer_outstanding_capital(portfolio, i['buyer'])['outstanding_capital']),
+            euro(r['platform_commission']), euro(r['sme_net_proceeds'])]
     frame = pd.DataFrame(data)
     styles = {risk_label(scenario, t): f'color: {foreground}; background-color: {background}; font-weight: 600'
               for scenario, (_, foreground, background) in RISK_COLORS.items()}
@@ -287,6 +290,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
                 st.write(t('Payment horizon') + ' · ' + t('{days} days', days=report['horizon_days']))
                 st.write(t('Potential gross gain') + ' · **' + euro(report['gross_discount']) + '**')
                 with st.expander(t('Returns and payment details')):
+                    render_commission_breakdown(invoice['amount'], report, t, euro)
                     st.caption(t('Expected payment') + ' · ' + report['expected_payment_on'])
                     st.write(t('Full-payment proceeds') + ' · **' + euro(invoice['amount']) + '**')
                     st.write(t('Gross return over the operation') +
@@ -347,6 +351,8 @@ def render_investor(page, invoices, database, t, euro, navigate):
                 for entry in review['rows']:
                     st.write(entry['invoice']['reference'] + ' · ' + euro(entry['report']['advance']) +
                              ' → ' + euro(entry['invoice']['amount']) + ' · ' + entry['report']['expected_payment_on'])
+                st.write(t('InvoiceFlow commission (1% once)') + ' · **' + euro(sum(e['report']['platform_commission'] for e in review['rows'])) + '**')
+                st.write(t('Net payment to the SME') + ' · **' + euro(sum(e['report']['sme_net_proceeds'] for e in review['rows'])) + '**')
                 st.write(t('Total capital') + ' · **' + euro(review['advance']) + '**')
                 st.write(t('Full-payment proceeds') + ' · **' + euro(review['repayment']) + '**')
                 st.caption(t('Selection terms: no SME recourse and no hypothetical insurance coverage.'))

@@ -8,6 +8,7 @@ from future_value import valuation_today
 from risk_pricing import ORIGINS, price_invoice, stress_scenarios
 from demo_pd import COHORTS, demo_cohort
 from engine import buyer_outstanding_capital
+from commission_ui import render_commission_breakdown
 
 
 def load_example(prefix):
@@ -149,6 +150,7 @@ def pricing_controls(invoice, t, euro, portfolio=None):
     b.metric(t('Potential gross gain'), euro(report['gross_discount']) if report['advance'] else t('Not available'))
     c.metric(t('Payment horizon'), t('{days} days', days=report['horizon_days']))
     st.caption(t('Full invoices only. Gross gains assume full payment and are before costs; capital is at risk.'))
+    render_commission_breakdown(invoice['amount'], report, t, euro)
     with st.expander(t('Risk and exposure details'), expanded=False):
         a, b = st.columns(2)
         a.metric(t('Calculated annual continuous rate (%)'), f"{report['annual_rate_percent']:.4f}" if report['annual_rate_percent'] is not None else '—')

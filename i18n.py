@@ -3077,6 +3077,17 @@ FR.update({'A non-EUR currency was detected. No amounts from that page were pref
 FR.update({'A negative asset or liability amount was detected. Check the source; the affected field was left empty.':'Un actif ou un passif négatif a été détecté. Vérifiez le document ; le champ concerné reste vide.'})
 
 
+FR.update({
+    'SME cost breakdown': 'Détail des coûts pour la PME',
+    'Invoice face value including tax': 'Montant TTC de la facture',
+    'Financing cost / gross investor gain': 'Coût du financement / gain brut du financeur',
+    'InvoiceFlow commission (1% once)': 'Commission InvoiceFlow (1 % unique)',
+    'Total cost to the SME': 'Coût total pour la PME',
+    'Net payment to the SME': 'Net versé à la PME',
+    'The InvoiceFlow commission leaves no positive net payment to the SME.': 'La commission InvoiceFlow ne laisse aucun montant net positif à verser à la PME.',
+    'The 1% commission is charged once on the invoice total including tax and deducted from the investor advance. It is platform revenue, separate from the investor gain. It is not an annual rate. Other charges and any tax on the commission are not modelled.': 'La commission de 1 % est prélevée une seule fois sur le TTC de la facture et déduite du capital avancé par le financeur. Elle constitue le revenu de la plateforme, distinct du gain du financeur. Ce taux n’est pas annualisé. Les autres frais et l’éventuelle TVA sur la commission ne sont pas modélisés.',
+})
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

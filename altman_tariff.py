@@ -5,6 +5,7 @@ from hashlib import sha256
 import json
 import math
 from financial_risk import assess_buyer
+from commission import add_commission
 from future_value import valuation_today
 
 MODEL_VERSION='altman-tariff-demo-v1'
@@ -39,5 +40,6 @@ def tariff_quote(invoice,as_of=None):
         advance=advance,gross_discount=round(face-advance,2),discount_percent=100*(face-advance)/face,
         annual_rate_percent=actual,horizon_days=days,expected_payment_on=invoice['due'],
         acceptable=not blockers,blockers=blockers,source_accounting_document=risk.get('document'))
+    add_commission(report)
     report['snapshot_hash']=sha256(json.dumps(report,sort_keys=True,allow_nan=False).encode()).hexdigest()
     return report

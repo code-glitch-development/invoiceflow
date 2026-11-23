@@ -9,6 +9,7 @@ from uuid import uuid4
 from future_value import continuous_future_value, valuation_today
 from risk_pricing import price_invoice
 from copy import deepcopy
+from commission import commission_breakdown
 
 
 def money(value):
@@ -127,7 +128,9 @@ def finance(i, rate, recourse, coverage, annual_interest_rate=0.0, financed_on=N
     if not isinstance(start, date) or not date.fromisoformat(i['issued']) <= start <= valuation_today():
         raise ValueError('The financing date must be between the issue date and today.')
     continuous_future_value(1, 0, annual_interest_rate)
-    i.update(status='Financed', financing={**quote(i['amount'], rate), 'rate': rate,
+    terms = quote(i['amount'], rate)
+    terms.update(commission_breakdown(i['amount'], terms['advance']))
+    i.update(status='Financed', financing={**terms, 'rate': rate,
              'recourse': recourse, 'coverage': coverage, 'financed_on': start.isoformat(),
              'annual_interest_rate': float(annual_interest_rate)})
     from financial_risk import assess_buyer
@@ -169,7 +172,7 @@ def finance_with_risk_pricing(i, assumptions, recourse, coverage):
     finance(candidate, report['discount_percent'], recourse, coverage,
             report['annual_rate_percent'], date.fromisoformat(report['priced_on']))
     candidate['financing'].update(advance=report['advance'], fee=report['gross_discount'],
-                                  pricing=deepcopy(report))
+                                  pricing=deepcopy(report), **commission_breakdown(i['amount'], report['advance']))
     i.update(candidate)
 
 
@@ -180,7 +183,8 @@ def finance_with_altman_tariff(i, recourse=False, coverage=0):
         raise ValueError(report['blockers'][0])
     candidate=deepcopy(i)
     finance(candidate,report['discount_percent'],recourse,coverage,report['annual_rate_percent'])
-    candidate['financing'].update(advance=report['advance'],fee=report['gross_discount'],pricing=report)
+    candidate['financing'].update(advance=report['advance'],fee=report['gross_discount'],pricing=report,
+                                  **commission_breakdown(i['amount'], report['advance']))
     i.update(candidate)
 
 

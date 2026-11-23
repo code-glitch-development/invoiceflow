@@ -504,3 +504,26 @@ databases that already loaded that batch before automatic insertion was reverted
 The cleanup runs before the workspace is displayed and applies to the shared
 records in every role, not just the SME table. Uploaded documents and manually
 created records without that provenance are preserved. No examples are recreated.
+
+
+## InvoiceFlow platform commission
+
+New financing simulations charge the SME a one-off platform commission of **1% of
+invoice face value including tax**, in addition to the financing discount. For a
+EUR 10,000 invoice due in 60 days at the 5% annual continuous tariff, investor
+capital is EUR 9,918.14, investor gross gain is EUR 81.86, InvoiceFlow commission
+is EUR 100, SME net proceeds are EUR 9,818.14 and total SME cost is EUR 181.86.
+The investor still receives the invoice face amount if paid in full. The platform
+commission is not annualized, added to investor returns or charged at repayment.
+
+The financing dossier, comparison, offer details, selection confirmation and
+saved portfolio show the commission separately. The SME overview totals net
+proceeds, while investor budgets, exposure and returns use the full investor
+capital. The independent revenue simulator now uses only the 1% platform fee,
+not the investor discount, for hypothetical platform revenue. Other charges and
+any VAT on the platform commission are not modelled.
+
+Pricing reports include the fee, SME net proceeds and total SME cost in their
+audit snapshot. Saving recomputes the amounts server-side. A nonpositive net
+payment blocks financing. No migration is required: existing financed records
+keep their original terms and are never assigned a commission retroactively.
