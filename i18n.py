@@ -3096,6 +3096,8 @@ FR.update({'Financing simulation': 'Simulation de financement', 'Workspace: {pro
 
 FR.update({'Colours indicate the pricing category, not a verified credit rating.': 'Les couleurs indiquent la catégorie de tarification, pas une note de crédit vérifiée.', 'Documents are shared across app visitors. Upload only documents you are allowed to share.': 'Les documents sont partagés entre les visiteurs de l’application. Déposez uniquement des documents que vous êtes autorisé à partager.'})
 
+FR.update({'Demonstration portfolio': 'Portefeuille de démonstration', 'Independent from your uploaded invoices and saved portfolio.': 'Indépendant de vos factures importées et de votre portefeuille enregistré.', 'Simulation completed. Your saved portfolio is unchanged.': 'Simulation terminée. Votre portefeuille enregistré reste inchangé.'})
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

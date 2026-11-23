@@ -592,7 +592,7 @@ Ten named SME profiles and existing imported suppliers are also selectable.
 Profiles create no invoices. Imported records and their saved financing amounts
 are preserved; no new cleanup deletes user documents or manually entered records.
 
-The investor overview and **Example invoices** page show five separately labelled
+The investor overview and **Demonstration portfolio** page show five separately labelled
 cases with Z-double-prime values 3.8576, 1.852, 1.2525, 0.788666666667 and no
 accounts, corresponding to tariffs 5%, 7%, 7%, 9% indicative/manual review and
 10%. All cases use the same tariff and commission code as uploaded invoices.
@@ -606,3 +606,15 @@ high-distress example remains blocked by the manual-review policy. Refreshing
 the date regenerates fresh example maturities; resetting the browser session
 resets example simulation state. Uploaded-invoice filters do not apply to the
 separate example catalogue.
+
+
+## Investor card presentation
+
+The isolated catalogue is titled **Demonstration portfolio** once, with standard
+invoice labels and references on individual cards rather than repeated Example
+labels. Cards have a left border and readable badge based on the actual Altman
+accounting band: green for lower distress, amber for grey, red for distress and
+grey for unassessed. An unknown risk never receives the green treatment. These
+colours do not claim a calibrated default probability. Model inputs, rates,
+commission, example isolation and the distress/manual-review restriction remain
+unchanged; illustrative source PDFs retain their provenance.

@@ -9,7 +9,7 @@ from accounting_extraction import extract_accounts
 from altman_tariff import tariff_quote
 from engine import finance_with_altman_tariff
 from financial_risk import assess_buyer
-from investor_examples import investor_examples
+from investor_examples import investor_examples, accounting_risk_colors
 from storage import InvoiceStore
 
 
@@ -49,6 +49,12 @@ class InvestorExampleTests(unittest.TestCase):
         self.assertFalse(invoice['documents'])
         self.assertEqual(cases[1:], untouched)
         self.assertEqual(invoice['financing']['platform_commission'], 120)
+
+    def test_colours_follow_accounting_zone_and_unknown_is_grey(self):
+        colours = [accounting_risk_colors(assess_buyer(case['invoice'])) for case in investor_examples()]
+        self.assertEqual([foreground for foreground, _ in colours],
+                         ['#166534', '#92400e', '#92400e', '#991b1b', '#475569'])
+        self.assertEqual(len(set(colours)), 4)
 
     def test_generation_uses_current_annual_period_and_future_maturities(self):
         today = date(2027, 11, 23)

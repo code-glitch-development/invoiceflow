@@ -6,6 +6,19 @@ from io import BytesIO
 from future_value import valuation_today
 
 
+# Accounting zones, not probabilities of default. Text labels accompany each colour.
+ACCOUNTING_COLORS = {
+    'Lower distress zone': ('#166534', '#dcfce7'),
+    'Grey zone': ('#92400e', '#fef3c7'),
+    'Distress zone': ('#991b1b', '#fee2e2'),
+    'Risk not assessed': ('#475569', '#f1f5f9'),
+}
+
+
+def accounting_risk_colors(risk):
+    return ACCOUNTING_COLORS.get(risk['band'], ACCOUNTING_COLORS['Risk not assessed'])
+
+
 def accounts_pdf(company, siren, year, values):
     """Small, text-readable source PDF for the explicitly illustrative inputs."""
     labels = {'total_assets': 'Total actif', 'current_assets': 'Actif circulant net',
@@ -73,12 +86,14 @@ def investor_examples(today=None):
 
 def render_investor_examples(t, euro):
     import streamlit as st
+    from html import escape
+    from engine import canonical
     from altman_tariff import tariff_quote
     from engine import finance_with_altman_tariff
     from financial_risk import assess_buyer
     from commission_ui import render_commission_breakdown
-    st.subheader(t('Example invoices') + ' · 5')
-    st.caption(t('Separate example catalogue. These five cases are not uploaded invoices and never enter SME/buyer records or your saved portfolio.'))
+    st.subheader(t('Demonstration portfolio') + ' · 5')
+    st.caption(t('Independent from your uploaded invoices and saved portfolio.'))
     today = valuation_today()
     if st.session_state.get('example_catalogue_date') != today.isoformat():
         st.session_state.investor_example_cases = investor_examples(today)
@@ -86,25 +101,28 @@ def render_investor_examples(t, euro):
     columns = st.columns(3)
     for index, case in enumerate(st.session_state.investor_example_cases):
         invoice = case['invoice']; report = tariff_quote(invoice, today); risk = assess_buyer(invoice, today)
-        with columns[index % 3], st.container(border=True):
-            st.caption(t('Example') + ' · ' + invoice['reference'])
+        foreground, background = accounting_risk_colors(risk)
+        card_key = 'risk_case_' + canonical(invoice['id'])
+        st.markdown('<style>.st-key-' + card_key + '{border-left:5px solid ' + foreground + ';background:' + background + ';border-radius:12px}</style>', unsafe_allow_html=True)
+        with columns[index % 3], st.container(border=True, key=card_key):
+            st.caption(f'INV-{today.year}-{index+1:03d}')
             st.markdown('**' + invoice['seller'] + '**')
             st.write(t('Buyer') + ' · ' + invoice['buyer'])
-            st.metric(t('Example invoice amount'), euro(invoice['amount']))
-            st.write(t('Buyer accounting risk') + ' · **' + t(risk['band']) + '**')
+            st.metric(t('Invoice amount'), euro(invoice['amount']))
+            st.markdown('<span style="display:inline-block;padding:5px 10px;border-radius:20px;font-weight:600;color:' + foreground + ';background:' + background + '">' + escape(t(risk['band'])) + '</span>', unsafe_allow_html=True)
             st.write('Z″ · **' + (f"{risk['value']:.4f}" if risk['value'] is not None else t('Risk not assessed')) + '**')
             st.write(t('Annual continuous tariff') + f" · **{report['policy_annual_rate_percent']:.0f} %**")
             st.caption(t('{days} days', days=report['horizon_days']))
-            with st.expander(t('Example calculation details')):
+            with st.expander(t('Calculation breakdown')):
                 render_commission_breakdown(invoice['amount'], report, t, euro)
                 if case['accounts_pdf']:
-                    st.download_button(t('Download example annual accounts'), case['accounts_pdf'],
+                    st.download_button(t('Download source annual accounts'), case['accounts_pdf'],
                         invoice['buyer_accounts']['document']['filename'], 'application/pdf', key='example_pdf_'+invoice['id'])
                 st.json(report)
             if invoice.get('financing'):
-                st.success(t('Example simulation completed. Your saved portfolio is unchanged.'))
+                st.success(t('Simulation completed. Your saved portfolio is unchanged.'))
             else:
                 for reason in report['blockers']: st.info(t(reason))
-                if st.button(t('Simulate this example'), key='example_finance_'+invoice['id'], disabled=not report['acceptable']):
+                if st.button(t('Simulate financing'), key='example_finance_'+invoice['id'], disabled=not report['acceptable']):
                     finance_with_altman_tariff(invoice)
                     st.rerun()

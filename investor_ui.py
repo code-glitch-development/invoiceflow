@@ -206,7 +206,7 @@ def render_portfolio_summary(invoices, t, euro, detailed=True):
 
 
 def render_investor(page, invoices, database, t, euro, navigate):
-    if page == 'Example invoices':
+    if page == 'Demonstration portfolio':
         from investor_examples import render_investor_examples
         render_investor_examples(t, euro)
         return

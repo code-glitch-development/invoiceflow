@@ -284,7 +284,7 @@ if profile == 'SME':
     invoices = sme_invoices(invoices, sme_company)
 elif profile == 'Buyer':
     invoices = buyer_invoices(invoices, buyer_company)
-if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Example invoices']):
+if not (profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Demonstration portfolio']):
     st.markdown('<div class="hero"><div class="eyebrow">' + t(workspace['title']) +
             '</div><h1>' + t(workspace['headline']) + '</h1><p>' +
             t(workspace['description']) + '</p></div>', unsafe_allow_html=True)
@@ -292,7 +292,7 @@ st.caption(t('Workspace: {profile}', profile=t(profile)))
 st.caption(t('Changes are saved automatically. Closing your browser does not delete saved invoices.'))
 if 'notice' in st.session_state:
     st.success(st.session_state.pop('notice'))
-if profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Example invoices']:
+if profile == 'Investor' and page in ['Overview', 'Compare opportunities', 'Simulation assumptions', 'Demonstration portfolio']:
     render_investor(page, invoices, database, t, euro, navigate)
 elif page == 'Overview':
     metrics, actionable = overview(profile, invoices)
