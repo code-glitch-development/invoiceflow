@@ -1938,6 +1938,87 @@ FR.update({'Send the personal confirmation link directly from InvoiceFlow, or pr
 FR.update({'Keep the API key private.': 'Gardez la clé API privée.'})
 
 
+FR.update({'View pending checks': 'Voir les contrôles en attente',
+ 'Checks are read-only in the SME workspace.': 'Les contrôles sont en lecture seule dans l’espace PME.',
+ 'Awaiting review': 'À vérifier',
+ 'Invoice review status': 'Statut des contrôles de la facture',
+ 'Invoice files awaiting review': 'Dossiers en attente de contrôle',
+ 'SME identity and supporting documents await review by InvoiceFlow or its financing partner. Submitting an invoice does not verify them.': 'L’identité '
+                                                                                                                                            'de '
+                                                                                                                                            'la '
+                                                                                                                                            'PME '
+                                                                                                                                            'et '
+                                                                                                                                            'les '
+                                                                                                                                            'justificatifs '
+                                                                                                                                            'sont '
+                                                                                                                                            'à '
+                                                                                                                                            'vérifier '
+                                                                                                                                            'par '
+                                                                                                                                            'InvoiceFlow '
+                                                                                                                                            'ou '
+                                                                                                                                            'son '
+                                                                                                                                            'partenaire '
+                                                                                                                                            'financeur. '
+                                                                                                                                            'Le '
+                                                                                                                                            'dépôt '
+                                                                                                                                            'de '
+                                                                                                                                            'la '
+                                                                                                                                            'facture '
+                                                                                                                                            'ne '
+                                                                                                                                            'les '
+                                                                                                                                            'valide '
+                                                                                                                                            'pas.',
+ 'SME identity and supporting documents must be reviewed by InvoiceFlow or its financing partner. This prototype has no independent verification service or reviewer workspace yet.': 'L’identité '
+                                                                                                                                                                                      'de '
+                                                                                                                                                                                      'la '
+                                                                                                                                                                                      'PME '
+                                                                                                                                                                                      'et '
+                                                                                                                                                                                      'les '
+                                                                                                                                                                                      'justificatifs '
+                                                                                                                                                                                      'doivent '
+                                                                                                                                                                                      'être '
+                                                                                                                                                                                      'contrôlés '
+                                                                                                                                                                                      'par '
+                                                                                                                                                                                      'InvoiceFlow '
+                                                                                                                                                                                      'ou '
+                                                                                                                                                                                      'son '
+                                                                                                                                                                                      'partenaire '
+                                                                                                                                                                                      'financeur. '
+                                                                                                                                                                                      'Ce '
+                                                                                                                                                                                      'prototype '
+                                                                                                                                                                                      'ne '
+                                                                                                                                                                                      'dispose '
+                                                                                                                                                                                      'pas '
+                                                                                                                                                                                      'encore '
+                                                                                                                                                                                      'de '
+                                                                                                                                                                                      'service '
+                                                                                                                                                                                      'de '
+                                                                                                                                                                                      'vérification '
+                                                                                                                                                                                      'indépendant '
+                                                                                                                                                                                      'ni '
+                                                                                                                                                                                      'd’espace '
+                                                                                                                                                                                      'de '
+                                                                                                                                                                                      'contrôle '
+                                                                                                                                                                                      'dédié.',
+ 'Older demo declarations are preserved as historical data; they do not prove independent verification.': 'Les '
+                                                                                                          'anciennes '
+                                                                                                          'déclarations '
+                                                                                                          'de '
+                                                                                                          'démonstration '
+                                                                                                          'sont '
+                                                                                                          'conservées '
+                                                                                                          'comme '
+                                                                                                          'historique '
+                                                                                                          '; '
+                                                                                                          'elles '
+                                                                                                          'ne '
+                                                                                                          'prouvent '
+                                                                                                          'pas '
+                                                                                                          'une '
+                                                                                                          'vérification '
+                                                                                                          'indépendante.'})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

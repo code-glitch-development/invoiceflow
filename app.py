@@ -11,7 +11,7 @@ from startup_cleanup import remove_auto_supplier_batch
 from i18n import Translator, localize_frame
 from workspaces import WORKSPACES, overview
 from invoice_extraction import FIELD_LABELS, apply_uploaded_invoice
-from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, complete_checks, journey, configure_interest, finance_with_risk_pricing
+from engine import new_invoice, score, eligible, confirm, finance, quote, loss_scenario, settle, migrate_session, financing_checks, financing_blockers, journey, configure_interest, finance_with_risk_pricing
 from future_value import continuous_future_value, investor_valuation, round_value, valuation_today
 from pricing_ui import pricing_controls
 from investor_ui import render_investor, render_portfolio_summary
@@ -97,15 +97,15 @@ def workflow(invoice):
         return
     if invoice.get('financing'):
         role, target, label = 'Investor', 'Portfolio', 'Next: track payment'
-    elif not invoice['identity'] or not invoice['documents']:
-        role, target, label = 'SME', 'Invoice checks', 'Next: complete invoice checks'
     elif invoice['buyer_status'] != 'Confirmed':
         role, target, label = 'SME', 'Buyer confirmation', 'Next: request buyer confirmation'
+    elif not invoice['identity'] or not invoice['documents']:
+        role, target, label = 'SME', 'Invoice checks', 'View pending checks'
     else:
         role, target = 'Investor', 'Financing'
         label = 'Next: simulate financing' if eligible(invoice) else 'Review financing blockers'
     if page == target and profile == role:
-        st.caption(t('Continue with the form and requirements below.'))
+        st.caption(t('Checks are read-only in the SME workspace.') if target == 'Invoice checks' else t('Continue with the form and requirements below.'))
     else:
         st.button(t(label), key=f"next_{page}_{invoice['id']}", on_click=navigate,
                   args=(role, target, invoice), type='primary')
@@ -150,7 +150,7 @@ def detail(i):
     b.metric(t('Demo score'), f'{score(i)[0]} / 100')
     c.metric(t('Due date'), date.fromisoformat(i['due']).strftime('%d/%m/%Y' if language == 'FR' else '%d %b %Y'))
     with st.expander(t('Checks and audit trail')):
-        st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Incomplete'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Incomplete'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Demo risk assessment', 'Result': t('{p0}/100 · threshold 65', p0=score(i)[0])}]), t), hide_index=True, use_container_width=True)
+        st.dataframe(localize_frame(pd.DataFrame([{'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Awaiting review'}, {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Awaiting review'}, {'Check': 'Buyer confirmation', 'Result': i['buyer_status']}, {'Check': 'Uniqueness within this workspace', 'Result': 'Supplier reference and file checked'}, {'Check': 'Demo risk assessment', 'Result': t('{p0}/100 · threshold 65', p0=score(i)[0])}]), t), hide_index=True, use_container_width=True)
         st.caption(t('Identity and document checks remain demo declarations. Buyer confirmation by personal link is recorded separately.'))
         st.write(t('SHA-256 fingerprint of metadata'))
         st.code(i['record_hash'])
@@ -325,15 +325,14 @@ elif page == 'Upload an invoice':
             strength = b.selectbox(t('Declared buyer financial strength'), ['Strong', 'Average', 'Weak'], key='ui_declared_buyer_financial_strength', format_func=t, index=selected_index('ui_declared_buyer_financial_strength', ['Strong', 'Average', 'Weak']))
             history = a.selectbox(t('Declared payment history'), ['On time', 'Occasional delays', 'Frequent delays'], key='ui_declared_payment_history', format_func=t, index=selected_index('ui_declared_payment_history', ['On time', 'Occasional delays', 'Frequent delays']))
             st.caption(t('The detected details remain editable. Identity, supporting documents and buyer risk must be checked separately. Use fictional documents.'))
-            identity = st.checkbox(t('Simulate verified SME identity'), key='ui_simulate_verified_sme_identity', value=st.session_state.get('ui_simulate_verified_sme_identity', False))
-            documents = st.checkbox(t('Simulate complete documentation: invoice, purchase order and proof of delivery'), key='ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', value=st.session_state.get('ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', False))
+            st.caption(t('SME identity and supporting documents await review by InvoiceFlow or its financing partner. Submitting an invoice does not verify them.'))
             submitted = st.button(t('Submit invoice'), type='primary', key='ui_submit_invoice')
         if submitted:
             try:
                 if amount is None or issued is None or due is None:
                     raise ValueError('Enter the invoice amount, issue date and due date before submitting.')
                 email = validate_email(buyer_email) if buyer_email.strip() else ''
-                item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=documents, identity=identity, strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
+                item = new_invoice(invoices, seller=seller, siren=siren.strip(), buyer=buyer, reference=reference, amount=amount, issued=issued, due=due, documents=False, identity=False, strength=strength, history=history, file_bytes=upload.getvalue() if upload else b'', filename=upload.name if upload else '')
                 item['buyer_email'] = email
                 database.add(item)
                 st.session_state.focus_invoice = item['id']
@@ -342,29 +341,21 @@ elif page == 'Upload an invoice':
             except ValueError as exc:
                 st.error(t(str(exc)))
 elif page == 'Invoice checks':
-    st.subheader(t('Complete an invoice file'))
-    st.caption(t('These checks are simulated declarations. No official company or document verification is performed.'))
-    if profile != 'SME':
-        st.info(t('Select the SME role to complete invoice checks.'))
+    st.subheader(t('Invoice review status'))
+    st.caption(t('Checks are read-only in the SME workspace.'))
+    st.info(t('SME identity and supporting documents must be reviewed by InvoiceFlow or its financing partner. This prototype has no independent verification service or reviewer workspace yet.'))
+    items = [i for i in invoices if not i.get('financing') and i['status'] != 'Closed']
+    if not items:
+        st.info(t('No invoices available.'))
     else:
-        editable = [i for i in invoices if not i.get('financing') and i['status'] != 'Closed']
-        if not editable:
-            st.info(t('No invoice files to complete.'))
-        else:
-            selected = pick(editable, 'checks_pick')
-            i = next(i for i in editable if i['id'] == selected)
-            detail(i)
-            with st.form('complete_checks_' + i['id']):
-                identity = st.checkbox(t('Simulate verified SME identity'), value=i['identity'], key='identity_' + i['id'])
-                documents = st.checkbox(t('Simulate complete documentation: invoice, purchase order and proof of delivery'), value=i['documents'], key='documents_' + i['id'])
-                save_checks = st.form_submit_button(t('Save invoice checks'), type='primary')
-            if save_checks:
-                try:
-                    persist_update(i, complete_checks, identity, documents)
-                    st.session_state.notice = t('Invoice checks saved.')
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(t(str(exc)))
+        selected = pick(items, 'checks_pick')
+        i = next(i for i in items if i['id'] == selected)
+        st.dataframe(localize_frame(pd.DataFrame([
+            {'Check': 'SME identity', 'Result': 'Declared verified (simulation)' if i['identity'] else 'Awaiting review'},
+            {'Check': 'Invoice, purchase order, delivery', 'Result': 'Documents declared complete' if i['documents'] else 'Awaiting review'},
+        ]), t), hide_index=True, use_container_width=True)
+        st.caption(t('Older demo declarations are preserved as historical data; they do not prove independent verification.'))
+        detail(i)
 elif page == 'Buyer confirmation':
     items = [i for i in invoices if i.get('buyer_confirmation') or (not i.get('financing') and i['status'] != 'Closed')]
     if not items:

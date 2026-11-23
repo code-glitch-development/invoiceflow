@@ -11,7 +11,7 @@ WORKSPACES = {
         'section': 'Your submitted invoices',
         'action': 'Upload an invoice',
         'target': 'Upload an invoice',
-        'steps': ['Upload an invoice', 'Complete an invoice file', 'Invoice and transaction tracking'],
+        'steps': ['Upload an invoice', 'Invoice review status', 'Invoice and transaction tracking'],
     },
     'Investor': {
         'pages': ['Overview', 'Compare opportunities', 'Portfolio', 'Simulation assumptions', 'Financing', 'Simulator'],
@@ -35,7 +35,7 @@ def overview(role, invoices):
                   i['status'] != 'Closed' and (not i['identity'] or not i['documents'])]
     if role == 'SME':
         metrics = [('Submitted volume', sum(i['amount'] for i in invoices), True),
-                   ('Invoice files to complete', len(incomplete), False),
+                   ('Invoice files awaiting review', len(incomplete), False),
                    ('Simulated advances', sum(i['financing']['advance'] for i in financed), True)]
         items = invoices
     else:

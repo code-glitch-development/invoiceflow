@@ -252,14 +252,28 @@ class InterfaceTests(unittest.TestCase):
             self.assertFalse(at.exception)
             self.assertEqual(at.text_input(key='ui_sme_name').value, 'Corrected supplier')
             self.assertEqual(at.number_input(key='ui_invoice_amount').value, 450.0)
-            # Extraction must not mark verification declarations as completed.
-            self.assertFalse(at.checkbox(key='ui_simulate_verified_sme_identity').value)
+            # The supplier has no self-verification controls.
+            self.assertNotIn('ui_simulate_verified_sme_identity', [c.key for c in at.checkbox])
+            self.assertNotIn('ui_simulate_complete_documentation_invoice_purchase_order_and_proof_of_delivery', [c.key for c in at.checkbox])
             next(b for b in at.button if b.label == 'Déposer la facture').click().run()
             self.assertFalse(at.exception)
             saved = next(i for i in at.session_state['invoices'] if i['reference'] == 'AUTO-TEST-001')
             self.assertEqual(saved['seller'], 'Corrected supplier')
             self.assertEqual(saved['amount'], 450.0)
             self.assertTrue(saved['file_hash'])
+            self.assertFalse(saved['identity'])
+            self.assertFalse(saved['documents'])
+
+    def test_sme_checks_are_read_only_and_preserve_existing_records(self):
+        at = self.app()
+        before = [dict(i) for i in at.session_state['invoices']]
+        for language in ('EN','FR'):
+            at.sidebar.radio(key='language').set_value(language).run()
+            at.sidebar.radio(key='ui_navigation').set_value('Invoice checks').run()
+            self.assertFalse(at.exception)
+            self.assertEqual(len(at.checkbox), 1)  # only the sidebar workspace deletion control
+            self.assertFalse(any(b.label in ('Save invoice checks','Enregistrer les contrôles') for b in at.button))
+            self.assertEqual(at.session_state['invoices'], before)
 
     def test_unreadable_upload_does_not_submit_or_crash(self):
         from io import BytesIO
