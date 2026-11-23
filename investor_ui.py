@@ -7,6 +7,7 @@ import streamlit as st
 from engine import buyer_outstanding_capital, canonical, money
 from portfolio import holding_yield_percent, portfolio_summary
 from financial_risk import assess_buyer
+from pricing_ui import illustrative_pricing_consent
 from opportunities import (SCENARIOS, DEFAULT_COSTS, buyer_scenario, assumptions_for, opportunities,
                            filtered, review_selection, review_fingerprint)
 
@@ -234,7 +235,7 @@ def render_investor(page, invoices, database, t, euro, navigate):
     unassessed = [i for i in invoices if assess_buyer(i)['value'] is None and not i.get('financing')]
     if unassessed:
         st.info(t('Return not calculated for {count} invoices: buyer accounting risk is not assessed.', count=len(unassessed)))
-    use_scenario = st.checkbox(t('Use an explicitly fictional pricing scenario for this demonstration'), key='allow_illustrative_pricing')
+    use_scenario = illustrative_pricing_consent(t)
     if not use_scenario:
         st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
     entries = opportunities(invoices, st.session_state.get('investor_assignments'), st.session_state.get('investor_costs')) if use_scenario else []

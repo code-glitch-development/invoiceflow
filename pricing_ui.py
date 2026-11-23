@@ -29,12 +29,20 @@ def change_pd_mode(prefix):
         st.session_state[prefix+'data_origin'] = 'Illustrative assumptions'
 
 
+def illustrative_pricing_consent(t):
+    # Keep the explicit choice when Streamlit cleans up widgets on another view.
+    st.session_state.setdefault('allow_illustrative_pricing', st.session_state.get('illustrative_pricing_choice', False))
+    accepted = st.checkbox(t('Use an explicitly fictional pricing scenario for this demonstration'), key='allow_illustrative_pricing')
+    st.session_state['illustrative_pricing_choice'] = accepted
+    return accepted
+
+
 def pricing_controls(invoice, t, euro, portfolio=None):
     from financial_risk import assess_buyer
     if assess_buyer(invoice)['value'] is None:
         st.info(t('Return not calculated — risk not assessed. Add the buyer annual accounts before preparing a financing simulation.'))
         return None
-    if not st.checkbox(t('Use an explicitly fictional pricing scenario for this demonstration'), key='allow_illustrative_pricing'):
+    if not illustrative_pricing_consent(t):
         st.info(t('No default yield: accounting ratios do not provide a calibrated probability of default. A documented pricing model or explicit simulation assumptions are required.'))
         return None
     st.warning(t('The following rates use fictional pricing assumptions. The accounting score does not determine their default probability or yield.'))
