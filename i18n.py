@@ -1935,6 +1935,9 @@ FR.update({'Send the personal confirmation link directly from InvoiceFlow, or pr
                                                                                                                                                                                                                                               'configuré.'})
 
 
+FR.update({'Keep the API key private.': 'Gardez la clé API privée.'})
+
+
 class Translator:
     def __init__(self, language='EN'):
         self.language = language

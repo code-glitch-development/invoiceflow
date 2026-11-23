@@ -131,19 +131,18 @@ Cloud → Settings → Secrets, add:
 ```toml
 BREVO_API_KEY = "your-private-brevo-api-key"
 BREVO_SENDER_EMAIL = "your-verified-sender@example.com"
-MAIL_SEND_CODE = "a-private-random-code-of-at-least-12-characters"
 ```
 
 Optional: `BREVO_SENDER_NAME="InvoiceFlow"`. The sender is fixed in server
-configuration, not taken from public form inputs. `MAIL_SEND_CODE` is a private
-operator code chosen by you, entered on the confirmation page before an automatic
-send. It protects this unauthenticated shared demo from unauthorised sending.
+configuration, not taken from public form inputs. No sending access code is
+required. A legacy `MAIL_SEND_CODE` secret is ignored and can be removed. Sending
+is available to visitors of this shared demo once Brevo is configured.
 Never put API keys in GitHub, recipient links, form fields or chat. Without the
 configuration, automatic send is disabled and the app explicitly says no mail
 will be sent. The manual copy/composer path remains available.
 
-Configure a reachable public app address, enter the recipient, supply the sending
-code and click **Send confirmation email**. A successful API response stores
+Configure a reachable public app address, enter the recipient and click
+**Send confirmation email**. A successful API response stores
 its message identifier and displays **accepted for sending**. This is not proof
 of delivery, mailbox ownership or buyer approval. Check the recipient's spam
 folder and Brevo Transactional logs for delivery/bounce details. This version

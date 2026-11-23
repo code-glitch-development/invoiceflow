@@ -345,18 +345,13 @@ class InterfaceTests(unittest.TestCase):
         at.selectbox(key='signature_pick').set_value(identifier).run()
         self.assertTrue(next(b for b in at.button if b.label=='Send confirmation email').disabled)
         client = Mock(send=Mock(return_value='<message@example.com>'))
-        with patch.dict('os.environ', {'BREVO_API_KEY':'test-key','BREVO_SENDER_EMAIL':'sender@example.com',
-                                      'MAIL_SEND_CODE':'private-send-code'}), patch('transactional_mail.BrevoClient',return_value=client):
+        with patch.dict('os.environ', {'BREVO_API_KEY':'test-key','BREVO_SENDER_EMAIL':'sender@example.com'}), patch('transactional_mail.BrevoClient',return_value=client):
             at.run()
             self.assertFalse(at.exception)
             at.text_input(key='confirmation_email_'+identifier).set_value('buyer@example.com')
             at.text_input(key='confirmation_app_url_'+identifier).set_value('https://invoiceflow.streamlit.app/')
-            # Wrong access code must not create a link or send a message.
-            next(b for b in at.button if b.label=='Send confirmation email').click().run()
-            self.assertFalse(at.exception)
-            client.send.assert_not_called()
-            self.assertNotIn('buyer_confirmation', next(i for i in at.session_state['invoices'] if i['id']==identifier))
-            at.text_input(key='mail_send_access_code').set_value('private-send-code').run()
+            self.assertFalse(any(w.key == 'mail_send_access_code' for w in at.text_input))
+            self.assertFalse(next(b for b in at.button if b.label=='Send confirmation email').disabled)
             next(b for b in at.button if b.label=='Send confirmation email').click().run()
             self.assertFalse(at.exception)
             self.assertEqual(client.send.call_count,1)

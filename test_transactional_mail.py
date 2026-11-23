@@ -12,10 +12,10 @@ from transactional_mail import BrevoClient, MailError, send_confirmation_email
 class MailSendingTests(unittest.TestCase):
     setUp = fixtures.ConfirmationTests.setUp
     invitation = fixtures.ConfirmationTests.invitation
-    def send(self, draft, client=None, code='private-send-code'):
+    def send(self, draft, client=None):
         client = client or Mock(send=Mock(return_value='<message-id@example.com>'))
         return send_confirmation_email(self.store, self.invoice['id'], draft, client,
-            entered_code=code, expected_code='private-send-code', now=self.now)
+            now=self.now)
 
     def test_api_acceptance_is_saved_without_confirming_invoice(self):
         draft=self.invitation()
@@ -29,13 +29,6 @@ class MailSendingTests(unittest.TestCase):
         self.assertNotIn(draft['token'],json.dumps(invoice))
         self.assertEqual(client.send.call_args.args[0],'buyer@example.com')
         self.assertIn(draft['link'],client.send.call_args.args[1]['body'])
-
-    def test_wrong_access_code_has_no_side_effect(self):
-        draft=self.invitation();client=Mock()
-        before=self.store.load()
-        with self.assertRaises(MailError): self.send(draft,client,code='wrong')
-        client.send.assert_not_called()
-        self.assertEqual(self.store.load(),before)
 
     def test_duplicate_sends_block_before_network(self):
         draft=self.invitation();client=Mock(send=Mock(return_value='id'))
@@ -84,7 +77,7 @@ class MailSendingTests(unittest.TestCase):
         with self.assertRaises(ConfirmationError): self.send(draft,client)
         with self.assertRaises(ConfirmationError):
             send_confirmation_email(self.store,self.invoice['id'],replacement,client,
-                entered_code='private-send-code',expected_code='private-send-code',now=self.now+timedelta(days=7))
+                now=self.now+timedelta(days=7))
         client.send.assert_not_called()
 
 

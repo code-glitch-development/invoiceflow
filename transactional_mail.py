@@ -1,6 +1,5 @@
 """Brevo HTTPS mail transport and persisted send attempts. No SMTP/SDK dependency."""
 from datetime import datetime, timezone
-import hmac
 import json
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlsplit
@@ -14,11 +13,6 @@ class MailError(ValueError):
     def __init__(self, message, uncertain=False):
         super().__init__(message)
         self.uncertain = uncertain
-
-
-def authorise_send(entered_code, expected_code):
-    if len(expected_code) < 12 or not hmac.compare_digest(entered_code.encode(), expected_code.encode()):
-        raise MailError('Enter the correct mail sending access code.')
 
 
 class BrevoClient:
@@ -61,9 +55,7 @@ class BrevoClient:
             raise MailError('Email sending is uncertain. Check Brevo transactional logs before any new send.', uncertain=True) from exc
 
 
-def send_confirmation_email(store, invoice_id, invitation, client, *, entered_code,
-                            expected_code, language='FR', now=None):
-    authorise_send(entered_code, expected_code)
+def send_confirmation_email(store, invoice_id, invitation, client, *, language='FR', now=None):
     moment = now or datetime.now(timezone.utc)
     attempt = uuid4().hex
     token = invitation['token']

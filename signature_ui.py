@@ -16,7 +16,7 @@ def mail_setting(name, default=''):
 
 
 def render_confirmation(invoice, database, t, language):
-    from transactional_mail import BrevoClient, MailError, authorise_send, send_confirmation_email
+    from transactional_mail import BrevoClient, send_confirmation_email
     st.subheader(t('Request buyer confirmation'))
     st.caption(t('Send the personal confirmation link directly from InvoiceFlow, or prepare an email for your own mailbox.'))
     st.caption(t('This is a confirmation by link. It does not independently verify the recipient identity or authority to represent the buyer.'))
@@ -35,17 +35,13 @@ def render_confirmation(invoice, database, t, language):
         return
     api_key = mail_setting('BREVO_API_KEY')
     sender = mail_setting('BREVO_SENDER_EMAIL')
-    expected_code = mail_setting('MAIL_SEND_CODE')
-    configured = bool(api_key and sender and len(expected_code) >= 12)
-    entered_code = ''
+    configured = bool(api_key and sender)
     if not configured:
         st.warning(t('Automatic email is not configured yet. No email will be sent by InvoiceFlow until setup is complete.'))
         with st.expander(t('Set up free automatic email')):
             st.write(t('Create a Brevo Free account, validate your sender and activate transactional sending. Add these values in Streamlit Settings → Secrets. No software installation is needed.'))
-            st.code('BREVO_API_KEY = "..."\nBREVO_SENDER_EMAIL = "your-verified-address@example.com"\nMAIL_SEND_CODE = "a-private-code-at-least-12-characters"', language='toml')
-            st.caption(t('Keep the API key private. Choose your own sending access code; it protects this shared demo from unauthorised email sending.'))
-    else:
-        entered_code = st.text_input(t('Mail sending access code'), type='password', key='mail_send_access_code')
+            st.code('BREVO_API_KEY = "..."\nBREVO_SENDER_EMAIL = "your-verified-address@example.com"', language='toml')
+            st.caption(t('Keep the API key private.'))
     delivery = record.get('email_delivery', {}) if record else {}
     state = delivery.get('state')
     if state == 'accepted':
@@ -67,14 +63,13 @@ def render_confirmation(invoice, database, t, language):
         try:
             client = None
             if auto:
-                authorise_send(entered_code, expected_code)
                 client = BrevoClient(api_key, sender, mail_setting('BREVO_SENDER_NAME', 'InvoiceFlow'))
             invitation = create_invitation(database, invoice['id'], email, address, replace=replace)
             st.session_state['confirmation_draft_' + invoice['id']] = invitation
             if auto:
                 with st.spinner(t('Sending the confirmation email…')):
                     send_confirmation_email(database, invoice['id'], invitation, client,
-                                            entered_code=entered_code, expected_code=expected_code, language=language)
+                                            language=language)
             st.rerun()
         except ValueError as exc:
             st.error(t(str(exc)))
@@ -89,7 +84,7 @@ def render_confirmation(invoice, database, t, language):
                     with st.spinner(t('Sending the confirmation email…')):
                         send_confirmation_email(database, invoice['id'], draft,
                             BrevoClient(api_key, sender, mail_setting('BREVO_SENDER_NAME', 'InvoiceFlow')),
-                            entered_code=entered_code, expected_code=expected_code, language=language)
+                            language=language)
                     st.rerun()
                 except ValueError as exc:
                     st.error(t(str(exc)))
